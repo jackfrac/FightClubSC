@@ -1,0 +1,729 @@
+{
+    "____comment": "This file was generated with eosio-abigen. DO NOT EDIT ",
+    "version": "eosio::abi/1.1",
+    "types": [],
+    "structs": [
+        {
+            "name": "addtoroom",
+            "base": "",
+            "fields": [
+                {
+                    "name": "roomid",
+                    "type": "uint64"
+                },
+                {
+                    "name": "username",
+                    "type": "name"
+                },
+                {
+                    "name": "heroes",
+                    "type": "uint64[]"
+                },
+                {
+                    "name": "timestamp",
+                    "type": "uint64"
+                }
+            ]
+        },
+        {
+            "name": "chanceset",
+            "base": "",
+            "fields": [
+                {
+                    "name": "ahead",
+                    "type": "uint64"
+                },
+                {
+                    "name": "agroin",
+                    "type": "uint64"
+                },
+                {
+                    "name": "achest",
+                    "type": "uint64"
+                },
+                {
+                    "name": "astomach",
+                    "type": "uint64"
+                },
+                {
+                    "name": "alegs",
+                    "type": "uint64"
+                },
+                {
+                    "name": "dhead",
+                    "type": "uint64"
+                },
+                {
+                    "name": "dgroin",
+                    "type": "uint64"
+                },
+                {
+                    "name": "dchest",
+                    "type": "uint64"
+                },
+                {
+                    "name": "dstomach",
+                    "type": "uint64"
+                },
+                {
+                    "name": "dlegs",
+                    "type": "uint64"
+                }
+            ]
+        },
+        {
+            "name": "cleanrooms",
+            "base": "",
+            "fields": []
+        },
+        {
+            "name": "createroom",
+            "base": "",
+            "fields": [
+                {
+                    "name": "username",
+                    "type": "name"
+                },
+                {
+                    "name": "heroes",
+                    "type": "uint64[]"
+                },
+                {
+                    "name": "timestamp",
+                    "type": "uint64"
+                }
+            ]
+        },
+        {
+            "name": "deleteroom",
+            "base": "",
+            "fields": [
+                {
+                    "name": "roomid",
+                    "type": "uint64"
+                }
+            ]
+        },
+        {
+            "name": "delgame",
+            "base": "",
+            "fields": [
+                {
+                    "name": "id",
+                    "type": "uint64"
+                }
+            ]
+        },
+        {
+            "name": "deluser",
+            "base": "",
+            "fields": [
+                {
+                    "name": "username",
+                    "type": "name"
+                }
+            ]
+        },
+        {
+            "name": "deserialize",
+            "base": "",
+            "fields": [
+                {
+                    "name": "username",
+                    "type": "name"
+                },
+                {
+                    "name": "hero1",
+                    "type": "hero_s"
+                },
+                {
+                    "name": "hero2",
+                    "type": "hero_s"
+                },
+                {
+                    "name": "hero3",
+                    "type": "hero_s"
+                }
+            ]
+        },
+        {
+            "name": "endgame",
+            "base": "",
+            "fields": [
+                {
+                    "name": "roomid",
+                    "type": "uint64"
+                }
+            ]
+        },
+        {
+            "name": "endgamelog",
+            "base": "",
+            "fields": [
+                {
+                    "name": "roomid",
+                    "type": "uint64"
+                },
+                {
+                    "name": "winner",
+                    "type": "name"
+                },
+                {
+                    "name": "loser",
+                    "type": "name"
+                }
+            ]
+        },
+        {
+            "name": "endturn",
+            "base": "",
+            "fields": [
+                {
+                    "name": "username",
+                    "type": "name"
+                }
+            ]
+        },
+        {
+            "name": "fight",
+            "base": "",
+            "fields": [
+                {
+                    "name": "roomid",
+                    "type": "uint64"
+                },
+                {
+                    "name": "username1",
+                    "type": "name"
+                },
+                {
+                    "name": "attacktype1",
+                    "type": "string"
+                },
+                {
+                    "name": "block1",
+                    "type": "string"
+                },
+                {
+                    "name": "username2",
+                    "type": "name"
+                },
+                {
+                    "name": "attacktype2",
+                    "type": "string"
+                },
+                {
+                    "name": "block2",
+                    "type": "string"
+                }
+            ]
+        },
+        {
+            "name": "fight_s",
+            "base": "",
+            "fields": [
+                {
+                    "name": "username",
+                    "type": "name"
+                },
+                {
+                    "name": "heroname",
+                    "type": "string"
+                },
+                {
+                    "name": "attacktype",
+                    "type": "string"
+                },
+                {
+                    "name": "damage",
+                    "type": "uint32"
+                },
+                {
+                    "name": "energy",
+                    "type": "uint32"
+                },
+                {
+                    "name": "blocktype",
+                    "type": "string"
+                },
+                {
+                    "name": "block",
+                    "type": "bool"
+                }
+            ]
+        },
+        {
+            "name": "fightlog",
+            "base": "",
+            "fields": [
+                {
+                    "name": "roomid",
+                    "type": "uint64"
+                },
+                {
+                    "name": "firstuser",
+                    "type": "fight_s"
+                },
+                {
+                    "name": "seconduser",
+                    "type": "fight_s"
+                }
+            ]
+        },
+        {
+            "name": "gameroom",
+            "base": "",
+            "fields": [
+                {
+                    "name": "roomid",
+                    "type": "uint64"
+                },
+                {
+                    "name": "username1",
+                    "type": "name"
+                },
+                {
+                    "name": "username2",
+                    "type": "name"
+                },
+                {
+                    "name": "round",
+                    "type": "uint32"
+                },
+                {
+                    "name": "heroes1",
+                    "type": "hero_s[]"
+                },
+                {
+                    "name": "heroes2",
+                    "type": "hero_s[]"
+                },
+                {
+                    "name": "nftheroes1",
+                    "type": "uint64[]"
+                },
+                {
+                    "name": "nftheroes2",
+                    "type": "uint64[]"
+                },
+                {
+                    "name": "timestamp",
+                    "type": "uint64"
+                },
+                {
+                    "name": "status",
+                    "type": "uint8"
+                }
+            ]
+        },
+        {
+            "name": "gameset",
+            "base": "",
+            "fields": [
+                {
+                    "name": "roomid",
+                    "type": "uint64"
+                },
+                {
+                    "name": "fightid",
+                    "type": "uint64"
+                }
+            ]
+        },
+        {
+            "name": "hero_s",
+            "base": "",
+            "fields": [
+                {
+                    "name": "heroname",
+                    "type": "string"
+                },
+                {
+                    "name": "rarity",
+                    "type": "uint8"
+                },
+                {
+                    "name": "energy",
+                    "type": "uint32"
+                },
+                {
+                    "name": "health",
+                    "type": "uint32"
+                }
+            ]
+        },
+        {
+            "name": "lboard",
+            "base": "",
+            "fields": [
+                {
+                    "name": "id",
+                    "type": "uint64"
+                },
+                {
+                    "name": "owner",
+                    "type": "name"
+                },
+                {
+                    "name": "boardname",
+                    "type": "string"
+                },
+                {
+                    "name": "gameid",
+                    "type": "uint64"
+                },
+                {
+                    "name": "pot",
+                    "type": "float64"
+                },
+                {
+                    "name": "players",
+                    "type": "player_s[]"
+                },
+                {
+                    "name": "prize",
+                    "type": "prize_s"
+                }
+            ]
+        },
+        {
+            "name": "logfight",
+            "base": "",
+            "fields": [
+                {
+                    "name": "username1",
+                    "type": "name"
+                },
+                {
+                    "name": "heroname1",
+                    "type": "string"
+                },
+                {
+                    "name": "damage1",
+                    "type": "uint64"
+                },
+                {
+                    "name": "randnumber1",
+                    "type": "uint64"
+                },
+                {
+                    "name": "username2",
+                    "type": "name"
+                },
+                {
+                    "name": "heroname2",
+                    "type": "string"
+                },
+                {
+                    "name": "damage2",
+                    "type": "uint64"
+                },
+                {
+                    "name": "randnumber2",
+                    "type": "uint64"
+                }
+            ]
+        },
+        {
+            "name": "player_s",
+            "base": "",
+            "fields": [
+                {
+                    "name": "account",
+                    "type": "name"
+                },
+                {
+                    "name": "points",
+                    "type": "float64"
+                },
+                {
+                    "name": "data",
+                    "type": "string"
+                },
+                {
+                    "name": "payout",
+                    "type": "float64"
+                }
+            ]
+        },
+        {
+            "name": "prize_s",
+            "base": "",
+            "fields": [
+                {
+                    "name": "mode",
+                    "type": "uint8"
+                },
+                {
+                    "name": "values",
+                    "type": "float64[]"
+                }
+            ]
+        },
+        {
+            "name": "receiverand",
+            "base": "",
+            "fields": [
+                {
+                    "name": "customer_id",
+                    "type": "uint64"
+                },
+                {
+                    "name": "random_value",
+                    "type": "checksum256"
+                }
+            ]
+        },
+        {
+            "name": "returnheroes",
+            "base": "",
+            "fields": [
+                {
+                    "name": "username",
+                    "type": "name"
+                },
+                {
+                    "name": "roomid",
+                    "type": "uint64"
+                }
+            ]
+        },
+        {
+            "name": "setchance",
+            "base": "",
+            "fields": [
+                {
+                    "name": "ahead",
+                    "type": "uint64"
+                },
+                {
+                    "name": "agroin",
+                    "type": "uint64"
+                },
+                {
+                    "name": "achest",
+                    "type": "uint64"
+                },
+                {
+                    "name": "astomach",
+                    "type": "uint64"
+                },
+                {
+                    "name": "alegs",
+                    "type": "uint64"
+                },
+                {
+                    "name": "dhead",
+                    "type": "uint64"
+                },
+                {
+                    "name": "dgroin",
+                    "type": "uint64"
+                },
+                {
+                    "name": "dchest",
+                    "type": "uint64"
+                },
+                {
+                    "name": "dstomach",
+                    "type": "uint64"
+                },
+                {
+                    "name": "dlegs",
+                    "type": "uint64"
+                }
+            ]
+        },
+        {
+            "name": "transferatom",
+            "base": "",
+            "fields": [
+                {
+                    "name": "from",
+                    "type": "name"
+                },
+                {
+                    "name": "to",
+                    "type": "name"
+                },
+                {
+                    "name": "asset_ids",
+                    "type": "uint64[]"
+                },
+                {
+                    "name": "memo",
+                    "type": "string"
+                }
+            ]
+        },
+        {
+            "name": "turn",
+            "base": "",
+            "fields": [
+                {
+                    "name": "username",
+                    "type": "name"
+                },
+                {
+                    "name": "attack",
+                    "type": "string"
+                },
+                {
+                    "name": "blocktype",
+                    "type": "string"
+                },
+                {
+                    "name": "specialatk",
+                    "type": "bool"
+                }
+            ]
+        },
+        {
+            "name": "usergame",
+            "base": "",
+            "fields": [
+                {
+                    "name": "username",
+                    "type": "name"
+                },
+                {
+                    "name": "roomid",
+                    "type": "uint64"
+                }
+            ]
+        }
+    ],
+    "actions": [
+        {
+            "name": "addtoroom",
+            "type": "addtoroom",
+            "ricardian_contract": ""
+        },
+        {
+            "name": "cleanrooms",
+            "type": "cleanrooms",
+            "ricardian_contract": ""
+        },
+        {
+            "name": "createroom",
+            "type": "createroom",
+            "ricardian_contract": ""
+        },
+        {
+            "name": "deleteroom",
+            "type": "deleteroom",
+            "ricardian_contract": ""
+        },
+        {
+            "name": "delgame",
+            "type": "delgame",
+            "ricardian_contract": ""
+        },
+        {
+            "name": "deluser",
+            "type": "deluser",
+            "ricardian_contract": ""
+        },
+        {
+            "name": "deserialize",
+            "type": "deserialize",
+            "ricardian_contract": ""
+        },
+        {
+            "name": "endgame",
+            "type": "endgame",
+            "ricardian_contract": ""
+        },
+        {
+            "name": "endgamelog",
+            "type": "endgamelog",
+            "ricardian_contract": ""
+        },
+        {
+            "name": "endturn",
+            "type": "endturn",
+            "ricardian_contract": ""
+        },
+        {
+            "name": "fight",
+            "type": "fight",
+            "ricardian_contract": ""
+        },
+        {
+            "name": "logfight",
+            "type": "logfight",
+            "ricardian_contract": ""
+        },
+        {
+            "name": "receiverand",
+            "type": "receiverand",
+            "ricardian_contract": ""
+        },
+        {
+            "name": "returnheroes",
+            "type": "returnheroes",
+            "ricardian_contract": ""
+        },
+        {
+            "name": "setchance",
+            "type": "setchance",
+            "ricardian_contract": ""
+        },
+        {
+            "name": "transferatom",
+            "type": "transferatom",
+            "ricardian_contract": ""
+        },
+        {
+            "name": "turn",
+            "type": "turn",
+            "ricardian_contract": ""
+        }
+    ],
+    "tables": [
+        {
+            "name": "chanceset",
+            "type": "chanceset",
+            "index_type": "i64",
+            "key_names": [],
+            "key_types": []
+        },
+        {
+            "name": "fightlogs",
+            "type": "fightlog",
+            "index_type": "i64",
+            "key_names": [],
+            "key_types": []
+        },
+        {
+            "name": "gamerooms",
+            "type": "gameroom",
+            "index_type": "i64",
+            "key_names": [],
+            "key_types": []
+        },
+        {
+            "name": "gameset",
+            "type": "gameset",
+            "index_type": "i64",
+            "key_names": [],
+            "key_types": []
+        },
+        {
+            "name": "lboards",
+            "type": "lboard",
+            "index_type": "i64",
+            "key_names": [],
+            "key_types": []
+        },
+        {
+            "name": "usergames",
+            "type": "usergame",
+            "index_type": "i64",
+            "key_names": [],
+            "key_types": []
+        }
+    ],
+    "ricardian_clauses": [],
+    "variants": []
+}
