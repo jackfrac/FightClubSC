@@ -129,6 +129,8 @@ ACTION darkcountryf::returnheroes(eosio::name username, uint64_t roomid)
             eosio::name("deleteroom"),
             std::make_tuple(roomid));
         deleteRoom.send();
+
+
     }
     else
     {
@@ -243,6 +245,10 @@ ACTION darkcountryf::deleteroom(uint64_t roomid)
     auto room_itr = _rooms.find(roomid);
     eosio::check(room_itr != _rooms.end(),"Room wasn't created.");
     eosio::check((room_itr->status == 4)||(room_itr->username2 == eosio::name("wait")||(room_itr->status == 101)) ,"Game wasn't ended.");
+
+    usersingames _usersingames(MAINCONTRACT,MAINCONTRACT.value);
+    auto user_itr = _usersingames.find(room_itr->username1.value);
+    _usersingames.erase(user_itr);
     
     _rooms.erase(room_itr);
 
@@ -397,10 +403,22 @@ ACTION darkcountryf::endturn(eosio::name username)
     if(!fight_itr->firstuser.heroname.empty())
     {
         require_auth(fight_itr->firstuser.username);
+        _fights.modify(fight_itr, MAINCONTRACT,[&](auto& mod_fight){
+            mod_fight.seconduser.energy = 0;
+            mod_fight.seconduser.damage = 0;
+            mod_fight.seconduser.attacktype = "0";
+            mod_fight.seconduser.blocktype = "0";   
+        });
     }
     else if(!fight_itr->seconduser.heroname.empty())
     {
         require_auth(fight_itr->seconduser.username);
+        _fights.modify(fight_itr, MAINCONTRACT,[&](auto& mod_fight){
+            mod_fight.firstuser.energy = 0;
+            mod_fight.firstuser.damage = 0;
+            mod_fight.firstuser.attacktype = "0";
+            mod_fight.firstuser.blocktype = "0";   
+        });
     }
     else
     {
