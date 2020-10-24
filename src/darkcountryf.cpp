@@ -404,6 +404,8 @@ ACTION darkcountryf::endturn(eosio::name username)
     {
         require_auth(fight_itr->firstuser.username);
         _fights.modify(fight_itr, MAINCONTRACT,[&](auto& mod_fight){
+            mod_fight.seconduser.username = room_itr->username2;
+            mod_fight.seconduser.heroname = getheroname(room_itr->heroes2);
             mod_fight.seconduser.energy = 0;
             mod_fight.seconduser.damage = 0;
             mod_fight.seconduser.attacktype = "0";
@@ -414,6 +416,8 @@ ACTION darkcountryf::endturn(eosio::name username)
     {
         require_auth(fight_itr->seconduser.username);
         _fights.modify(fight_itr, MAINCONTRACT,[&](auto& mod_fight){
+            mod_fight.firstuser.username = room_itr->username1;
+            mod_fight.firstuser.heroname = getheroname(room_itr->heroes1);
             mod_fight.firstuser.energy = 0;
             mod_fight.firstuser.damage = 0;
             mod_fight.firstuser.attacktype = "0";
