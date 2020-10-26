@@ -394,7 +394,7 @@ ACTION darkcountryf::endturn(eosio::name username)
     eosio::check(room_itr != _rooms.end(),"Couldn't find room.");
     eosio::check((room_itr->username1 == username)||(room_itr->username2 == username),"Current user doesn't play in this room.");
     //eosio::check(room_itr->status == 1,"In this game phase you can't end turn.");
-    eosio::check(room_itr->timestamp+30 <= eosio::current_time_point().sec_since_epoch(),"Sorry, but you can end turn only, when opponent have not done his turn for 30 sec.");
+    eosio::check(room_itr->timestamp+30 <= (uint64_t)eosio::current_time_point().sec_since_epoch(),"Sorry, but you can end turn only, when opponent have not done his turn for 30 sec.");
 
     fights _fights(MAINCONTRACT, MAINCONTRACT.value);
     auto fight_itr = _fights.find(user_itr->roomid);
@@ -550,7 +550,9 @@ ACTION darkcountryf::receiverand (uint64_t customer_id, const eosio::checksum256
                 mod_room.status = 4;
             }
         }
+        if(fight_itr->firstuser.energy != 0)
         mod_room.heroes1.at(pos1).energy -= fight_itr->firstuser.energy;
+        if(fight_itr->seconduser.energy != 0)
         mod_room.heroes2.at(pos2).energy -= fight_itr->seconduser.energy;
         if(mod_room.status == 2)
         {
@@ -757,7 +759,7 @@ ACTION darkcountryf::cleanrooms()
 
     while(room_itr != _rooms.end())
     {
-        if((room_itr->status == 4) && (room_itr->timestamp+300 <= eosio::current_time_point().sec_since_epoch()))
+        if((room_itr->status == 4) && (room_itr->timestamp+150 <= (uint64_t)eosio::current_time_point().sec_since_epoch()))
         {
             auto fight_itr = _fights.find(room_itr->roomid);
             if(fight_itr != _fights.end())
@@ -766,7 +768,7 @@ ACTION darkcountryf::cleanrooms()
             }
             room_itr = _rooms.erase(room_itr);
         }
-        else if ((room_itr->status != 4)&&(room_itr->timestamp+600 <= eosio::current_time_point().sec_since_epoch()))
+        else if ((room_itr->status != 4)&&(room_itr->timestamp+30 <= (uint64_t)eosio::current_time_point().sec_since_epoch()))
         {
              eosio::action returnHeroes = eosio::action(
                 eosio::permission_level{MAINCONTRACT, eosio::name("active")},
@@ -775,10 +777,8 @@ ACTION darkcountryf::cleanrooms()
                 std::make_tuple(room_itr->roomid));
             returnHeroes.send();
         }
-        else
-        {
             room_itr++;
-        }
+        
     }
 }
 
