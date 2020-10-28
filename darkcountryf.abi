@@ -4,6 +4,20 @@
     "types": [],
     "structs": [
         {
+            "name": "addheroes",
+            "base": "",
+            "fields": [
+                {
+                    "name": "from",
+                    "type": "name"
+                },
+                {
+                    "name": "asset_ids",
+                    "type": "uint64[]"
+                }
+            ]
+        },
+        {
             "name": "addtoroom",
             "base": "",
             "fields": [
@@ -22,6 +36,10 @@
                 {
                     "name": "timestamp",
                     "type": "uint64"
+                },
+                {
+                    "name": "gametype",
+                    "type": "uint8"
                 }
             ]
         },
@@ -91,6 +109,10 @@
                 {
                     "name": "timestamp",
                     "type": "uint64"
+                },
+                {
+                    "name": "gametype",
+                    "type": "uint8"
                 }
             ]
         },
@@ -271,7 +293,21 @@
             ]
         },
         {
-            "name": "gameroom",
+            "name": "gameset",
+            "base": "",
+            "fields": [
+                {
+                    "name": "roomid",
+                    "type": "uint64"
+                },
+                {
+                    "name": "fightid",
+                    "type": "uint64"
+                }
+            ]
+        },
+        {
+            "name": "gamesroom",
             "base": "",
             "fields": [
                 {
@@ -313,19 +349,19 @@
                 {
                     "name": "status",
                     "type": "uint8"
+                },
+                {
+                    "name": "gametype",
+                    "type": "uint8"
                 }
             ]
         },
         {
-            "name": "gameset",
+            "name": "hero",
             "base": "",
             "fields": [
                 {
-                    "name": "roomid",
-                    "type": "uint64"
-                },
-                {
-                    "name": "fightid",
+                    "name": "heroid",
                     "type": "uint64"
                 }
             ]
@@ -349,6 +385,24 @@
                 {
                     "name": "health",
                     "type": "uint32"
+                }
+            ]
+        },
+        {
+            "name": "killtable",
+            "base": "",
+            "fields": [
+                {
+                    "name": "username",
+                    "type": "name"
+                },
+                {
+                    "name": "kills",
+                    "type": "uint64"
+                },
+                {
+                    "name": "totaldamage",
+                    "type": "uint64"
                 }
             ]
         },
@@ -475,6 +529,11 @@
             ]
         },
         {
+            "name": "resetstats",
+            "base": "",
+            "fields": []
+        },
+        {
             "name": "returnheroes",
             "base": "",
             "fields": [
@@ -595,6 +654,11 @@
     ],
     "actions": [
         {
+            "name": "addheroes",
+            "type": "addheroes",
+            "ricardian_contract": ""
+        },
+        {
             "name": "addtoroom",
             "type": "addtoroom",
             "ricardian_contract": ""
@@ -660,6 +724,11 @@
             "ricardian_contract": ""
         },
         {
+            "name": "resetstats",
+            "type": "resetstats",
+            "ricardian_contract": ""
+        },
+        {
             "name": "returnheroes",
             "type": "returnheroes",
             "ricardian_contract": ""
@@ -696,15 +765,29 @@
             "key_types": []
         },
         {
-            "name": "gamerooms",
-            "type": "gameroom",
+            "name": "gameset",
+            "type": "gameset",
             "index_type": "i64",
             "key_names": [],
             "key_types": []
         },
         {
-            "name": "gameset",
-            "type": "gameset",
+            "name": "gamesrooms",
+            "type": "gamesroom",
+            "index_type": "i64",
+            "key_names": [],
+            "key_types": []
+        },
+        {
+            "name": "heroes",
+            "type": "hero",
+            "index_type": "i64",
+            "key_names": [],
+            "key_types": []
+        },
+        {
+            "name": "killtables",
+            "type": "killtable",
             "index_type": "i64",
             "key_names": [],
             "key_types": []

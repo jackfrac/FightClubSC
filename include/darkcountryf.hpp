@@ -64,7 +64,7 @@ CONTRACT darkcountryf : public eosio::contract {
     //help action
     ACTION delgame(uint64_t id);
     ACTION deluser(eosio::name username);
-    
+    ACTION resetstats();
 
     //log actions
     ACTION logfight(eosio::name username1, std::string heroname1, uint64_t damage1, uint64_t randnumber1,

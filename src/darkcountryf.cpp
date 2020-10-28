@@ -23,6 +23,17 @@ ACTION darkcountryf::setchance( uint64_t ahead, uint64_t agroin, uint64_t achest
     config.set(_cstate, MAINCONTRACT);
 }
 
+ACTION darkcountryf::resetstats()
+{
+    require_auth(MAINCONTRACT);
+    killtables _kills(MAINCONTRACT, MAINCONTRACT.value);
+    auto kill_itr = _kills.begin();
+    while(kill_itr!=_kills.end())
+    {
+        kill_itr = _kills.erase(kill_itr);
+    }
+}
+
 
 ////////////////////////////////////////////////////////////
 //              ROOM ACTIONS
@@ -967,22 +978,45 @@ ACTION darkcountryf::delgame(uint64_t id)
 
     rooms _rooms(MAINCONTRACT, MAINCONTRACT.value);
     auto room_itr = _rooms.find(id);
-    
-    eosio::action returnHeroes = eosio::action(
-        eosio::permission_level{MAINCONTRACT, eosio::name("active")},
-        ATOMICCONTRACT,
-        eosio::name("transfer"),
-        std::make_tuple(MAINCONTRACT, room_itr->username1, room_itr->nftheroes1,std::string("Return heroes from Heroes Fight.")));
-    returnHeroes.send();
+    eosio::check(room_itr != _rooms.end(),"Room doesn't exist.");
 
-    if(room_itr->username2!=eosio::name("wait"))
-    {   eosio::action return1Heroes = eosio::action(
+     if(room_itr->gametype == 0)
+    {
+        eosio::action returnHeroes = eosio::action(
             eosio::permission_level{MAINCONTRACT, eosio::name("active")},
             ATOMICCONTRACT,
             eosio::name("transfer"),
-            std::make_tuple(MAINCONTRACT, room_itr->username2, room_itr->nftheroes2,std::string("Return heroes from Heroes Fight.")));
-        return1Heroes.send();
+            std::make_tuple(MAINCONTRACT, room_itr->username1, room_itr->nftheroes1,std::string("Return heroes from Heroes Fight.")));
+        returnHeroes.send();
+
+        if(room_itr->username2!=eosio::name("wait"))
+        {
+            eosio::action return1Heroes = eosio::action(
+                eosio::permission_level{MAINCONTRACT, eosio::name("active")},
+                ATOMICCONTRACT,
+                eosio::name("transfer"),
+                std::make_tuple(MAINCONTRACT, room_itr->username2, room_itr->nftheroes2,std::string("Return heroes from Heroes Fight.")));
+            return1Heroes.send();
+    
+        }
+    } 
+    else if(room_itr->gametype == 1)
+    {
+        heroes _heroes(MAINCONTRACT, MAINCONTRACT.value);
+        for (int i = 0; i < room_itr->nftheroes1.size(); i++)
+        {
+            auto hero_itr = _heroes.find(room_itr->nftheroes1.at(i));
+            eosio::check(hero_itr != _heroes.end(),"Hero doesn't exist in game.");
+            _heroes.erase(hero_itr);
+        }
+        for (int i = 0; i < room_itr->nftheroes2.size(); i++)
+        {
+            auto hero_itr = _heroes.find(room_itr->nftheroes2.at(i));
+            eosio::check(hero_itr != _heroes.end(),"Hero doesn't exist in game.");
+            _heroes.erase(hero_itr);
+        }
     }
+    
     _rooms.erase(room_itr);
 
     fights _fights(MAINCONTRACT, MAINCONTRACT.value);
@@ -1171,7 +1205,7 @@ extern "C" void apply(uint64_t receiver, uint64_t code, uint64_t action)
   {
     switch (action)
     {
-      EOSIO_DISPATCH_HELPER(darkcountryf, (createroom)(addtoroom)(deleteroom)(addheroes)(setchance)(returnheroes)(turn)(endturn)(fight)(receiverand)(delgame)(endgame)(deluser)(logfight)(cleanrooms)(deserialize)(endgamelog))
+      EOSIO_DISPATCH_HELPER(darkcountryf, (resetstats)(createroom)(addtoroom)(deleteroom)(addheroes)(setchance)(returnheroes)(turn)(endturn)(fight)(receiverand)(delgame)(endgame)(deluser)(logfight)(cleanrooms)(deserialize)(endgamelog))
     }
   }
   else if (code == ATOMICCONTRACT.value && action == eosio::name("transfer").value)
