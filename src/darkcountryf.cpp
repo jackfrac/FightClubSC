@@ -1,5 +1,8 @@
 #include <darkcountryf.hpp>
 
+//TODO kill counter && total damage add 
+
+
 ACTION darkcountryf::setchance( uint64_t ahead, uint64_t agroin, uint64_t achest, uint64_t astomach, uint64_t alegs, 
                         uint64_t dhead, uint64_t dgroin, uint64_t dchest, uint64_t dstomach, uint64_t dlegs)
 {
@@ -76,13 +79,13 @@ ACTION darkcountryf::transferatom(eosio::name from, eosio::name to, std::vector<
     {
         while(room_itr != _rooms.end())
         {
-            if (room_itr->username2 == eosio::name("wait"))
+            if (room_itr->username2 == eosio::name("wait") && room_itr->gametype == 0)
             {
                 eosio::action addToRoom = eosio::action(
                     eosio::permission_level{MAINCONTRACT, eosio::name("active")},
                     MAINCONTRACT,
                     eosio::name("addtoroom"),
-                    std::make_tuple(room_itr->roomid, from, asset_ids, (uint64_t)eosio::current_time_point().sec_since_epoch()));
+                    std::make_tuple(room_itr->roomid, from, asset_ids, (uint64_t)eosio::current_time_point().sec_since_epoch(),0));
                 addToRoom.send();
                 break;
             }
@@ -97,7 +100,7 @@ ACTION darkcountryf::transferatom(eosio::name from, eosio::name to, std::vector<
                     eosio::permission_level{MAINCONTRACT, eosio::name("active")},
                     MAINCONTRACT,
                     eosio::name("createroom"),
-                    std::make_tuple(from, asset_ids, (uint64_t)eosio::current_time_point().sec_since_epoch()));
+                    std::make_tuple(from, asset_ids, (uint64_t)eosio::current_time_point().sec_since_epoch(),0));
                 createRoom.send();
                 break;
             }
@@ -105,7 +108,89 @@ ACTION darkcountryf::transferatom(eosio::name from, eosio::name to, std::vector<
     }
 
 }
-//TODO change, add check
+
+
+//atomic transfer action -> create room/add to exists room
+ACTION darkcountryf::addheroes(eosio::name from, std::vector<uint64_t> asset_ids)
+{
+    require_auth(from);
+
+    eosio::check(asset_ids.size() == 3, "Sorry, you must transfer three heroes on one transaction.");
+
+    assets _atomicass(eosio::name("atomicassets"), from.value);
+    
+    usersingames _usersingames(MAINCONTRACT, MAINCONTRACT.value);
+    auto user_itr = _usersingames.find(from.value);
+    eosio::check(user_itr == _usersingames.end(),"User plays game now.");
+
+    heroes _heroes(MAINCONTRACT, MAINCONTRACT.value);
+
+    //check are all items with one rarity
+    for(int i = 0; i < asset_ids.size(); i++)
+    {
+        auto asset_itr = _atomicass.find(asset_ids.at(i));
+        eosio::check(asset_itr != _atomicass.end(), "Can't find asset.");
+        eosio::check(asset_itr->collection_name == HEROCONTRACT, "Wrong asset collection.");
+        eosio::check((asset_itr->schema_name == eosio::name("rareheroes")) || (asset_itr->schema_name == eosio::name("epicheroes")) || (asset_itr->schema_name == eosio::name("legheroes")) || (asset_itr->schema_name == eosio::name("mythheroes")) || (asset_itr->schema_name == eosio::name("dcheroes")),"Wrong asset(schema).");
+
+        auto hero_itr = _heroes.find(asset_itr->asset_id);
+        eosio::check(hero_itr == _heroes.end(),"Hero is in game.");
+        _heroes.emplace(MAINCONTRACT,[&](auto& new_hero){
+            new_hero.heroid = asset_itr->asset_id;
+        });
+    }
+
+    rooms _rooms(MAINCONTRACT, MAINCONTRACT.value);
+    auto room_itr = _rooms.begin();
+
+    if(room_itr == _rooms.end())
+    {
+        eosio::action createRoom = eosio::action(
+            eosio::permission_level{MAINCONTRACT, eosio::name("active")},
+            MAINCONTRACT,
+            eosio::name("createroom"),
+            std::make_tuple(from, asset_ids, (uint64_t)eosio::current_time_point().sec_since_epoch())
+        );
+        createRoom.send();
+    }
+    else
+    {
+        while(room_itr != _rooms.end())
+        {
+            if (room_itr->username2 == eosio::name("wait") && room_itr->gametype == 1)
+            {
+                eosio::action addToRoom = eosio::action(
+                    eosio::permission_level{MAINCONTRACT, eosio::name("active")},
+                    MAINCONTRACT,
+                    eosio::name("addtoroom"),
+                    std::make_tuple(room_itr->roomid, from, asset_ids, (uint64_t)eosio::current_time_point().sec_since_epoch(),1));
+                addToRoom.send();
+                break;
+            }
+            else
+            {
+                room_itr++;
+            }
+
+            if(room_itr == _rooms.end())
+            {
+                eosio::action createRoom = eosio::action(
+                    eosio::permission_level{MAINCONTRACT, eosio::name("active")},
+                    MAINCONTRACT,
+                    eosio::name("createroom"),
+                    std::make_tuple(from, asset_ids, (uint64_t)eosio::current_time_point().sec_since_epoch(),1));
+                createRoom.send();
+                break;
+            }
+        }
+    }
+
+}
+
+
+
+
+
 ACTION darkcountryf::returnheroes(eosio::name username, uint64_t roomid)
 {
     require_auth(username);
@@ -113,15 +198,29 @@ ACTION darkcountryf::returnheroes(eosio::name username, uint64_t roomid)
     rooms _rooms(MAINCONTRACT,MAINCONTRACT.value);
     auto room_itr = _rooms.find(roomid);
     eosio::check(room_itr != _rooms.end(),"Room doesn't exist.");
+    eosio::check((room_itr->status == 100)||(room_itr->status == 101),"Game was started.");
 
-    if(room_itr->timestamp+180 <= eosio::current_time_point().sec_since_epoch() && room_itr->username2==eosio::name("wait"))
+    if(room_itr->timestamp+90 <= (uint64_t)eosio::current_time_point().sec_since_epoch() && room_itr->username2==eosio::name("wait"))
     {
-        eosio::action returnHeroes = eosio::action(
-            eosio::permission_level{MAINCONTRACT, eosio::name("active")},
-            ATOMICCONTRACT,
-            eosio::name("transfer"),
-            std::make_tuple(MAINCONTRACT, room_itr->username1, room_itr->nftheroes1,std::string("Return heroes from Heroes Fight.")));
-        returnHeroes.send();
+        if(room_itr->gametype == 0)
+        {
+            eosio::action returnHeroes = eosio::action(
+                eosio::permission_level{MAINCONTRACT, eosio::name("active")},
+                ATOMICCONTRACT,
+                eosio::name("transfer"),
+                std::make_tuple(MAINCONTRACT, room_itr->username1, room_itr->nftheroes1,std::string("Return heroes from Heroes Fight.")));
+            returnHeroes.send();
+        }
+        else if (room_itr->gametype == 1)
+        {
+            heroes _heroes(MAINCONTRACT, MAINCONTRACT.value);
+            for (int i = 0; i < room_itr->nftheroes1.size(); i++)
+            {
+                auto hero_itr = _heroes.find(room_itr->nftheroes1.at(i));
+                eosio::check(hero_itr != _heroes.end(),"Hero doesn't exist in game.");
+                _heroes.erase(hero_itr);
+            }
+        }
 
         eosio::action deleteRoom = eosio::action(
             eosio::permission_level{MAINCONTRACT, eosio::name("active")},
@@ -180,7 +279,7 @@ ACTION darkcountryf::deserialize(eosio::name username, hero_s hero1, hero_s hero
 //              ROOM ACTIONS
 ////////////////////////////////////////////////////////////
 
-ACTION darkcountryf::createroom(eosio::name username, std::vector<uint64_t> heroes, uint64_t timestamp)
+ACTION darkcountryf::createroom(eosio::name username, std::vector<uint64_t> heroes, uint64_t timestamp, uint8_t gametype)
 {
     require_auth(MAINCONTRACT);
 
@@ -202,6 +301,7 @@ ACTION darkcountryf::createroom(eosio::name username, std::vector<uint64_t> hero
         new_room.timestamp = timestamp;
         new_room.username2 = eosio::name("wait");
         new_room.status = 101;
+        new_room.gametype = gametype;
     });
 
 
@@ -211,7 +311,7 @@ ACTION darkcountryf::createroom(eosio::name username, std::vector<uint64_t> hero
     });
 }
 
-ACTION darkcountryf::addtoroom(uint64_t roomid, eosio::name username, std::vector<uint64_t> heroes, uint64_t timestamp)
+ACTION darkcountryf::addtoroom(uint64_t roomid, eosio::name username, std::vector<uint64_t> heroes, uint64_t timestamp, uint8_t gametype)
 {
     require_auth(MAINCONTRACT);
 
@@ -222,6 +322,7 @@ ACTION darkcountryf::addtoroom(uint64_t roomid, eosio::name username, std::vecto
     rooms _rooms(MAINCONTRACT, MAINCONTRACT.value);
     auto room_itr = _rooms.find(roomid);
     eosio::check(room_itr != _rooms.end(),"Room wasn't created.");
+    eosio::check(room_itr->gametype == gametype,"Wrong room game type.");
 
     _rooms.modify(room_itr, MAINCONTRACT, [&](auto& new_room){
         new_room.username2 = username;
@@ -244,7 +345,7 @@ ACTION darkcountryf::deleteroom(uint64_t roomid)
     rooms _rooms(MAINCONTRACT, MAINCONTRACT.value);
     auto room_itr = _rooms.find(roomid);
     eosio::check(room_itr != _rooms.end(),"Room wasn't created.");
-    eosio::check((room_itr->status == 4)||(room_itr->username2 == eosio::name("wait")||(room_itr->status == 101)) ,"Game wasn't ended.");
+    eosio::check((room_itr->status == 4)||(room_itr->username2 == eosio::name("wait")||(room_itr->status == 101)||(room_itr->status == 100)) ,"Game wasn't ended.");
 
     usersingames _usersingames(MAINCONTRACT,MAINCONTRACT.value);
     auto user_itr = _usersingames.find(room_itr->username1.value);
@@ -296,18 +397,6 @@ ACTION darkcountryf::turn(eosio::name username, std::string attack, std::string 
     fights _fights(MAINCONTRACT, MAINCONTRACT.value);
     auto fight_itr = _fights.find(user_itr->roomid);
 
-    _rooms.modify(room_itr, MAINCONTRACT, [&](auto& mod_room){
-        if (mod_room.status == 0)
-        {
-            mod_room.status = 1;
-            mod_room.round++;
-        }
-        else
-        {
-            mod_room.status = 2;
-        }
-        mod_room.timestamp = eosio::current_time_point().sec_since_epoch();
-    });
 
 
     if(fight_itr == _fights.end())
@@ -376,10 +465,24 @@ ACTION darkcountryf::turn(eosio::name username, std::string attack, std::string 
             }
             else
             {
-                eosio::check(0,"Something come wrong...");
+                eosio::check(0,"Something comes wrong...");
             }
         });
     }
+
+
+    _rooms.modify(room_itr, MAINCONTRACT, [&](auto& mod_room){
+        if (mod_room.status == 0)
+        {
+            mod_room.status = 1;
+            mod_room.round++;
+        }
+        else
+        {
+            mod_room.status = 2;
+        }
+        mod_room.timestamp = eosio::current_time_point().sec_since_epoch();
+    });
 
 }
 
@@ -393,13 +496,14 @@ ACTION darkcountryf::endturn(eosio::name username)
     auto room_itr = _rooms.find(user_itr->roomid);
     eosio::check(room_itr != _rooms.end(),"Couldn't find room.");
     eosio::check((room_itr->username1 == username)||(room_itr->username2 == username),"Current user doesn't play in this room.");
-    //eosio::check(room_itr->status == 1,"In this game phase you can't end turn.");
+    eosio::check(room_itr->status == 1,"In this game phase you can't end turn.");
     eosio::check(room_itr->timestamp+30 <= (uint64_t)eosio::current_time_point().sec_since_epoch(),"Sorry, but you can end turn only, when opponent have not done his turn for 30 sec.");
 
     fights _fights(MAINCONTRACT, MAINCONTRACT.value);
     auto fight_itr = _fights.find(user_itr->roomid);
     eosio::check(fight_itr != _fights.end(),"Fight doesn't finded.");
 
+    //TODO not empty
     if(!fight_itr->firstuser.heroname.empty())
     {
         require_auth(fight_itr->firstuser.username);
@@ -525,6 +629,7 @@ ACTION darkcountryf::receiverand (uint64_t customer_id, const eosio::checksum256
     uint64_t damage2 = setdamage(num2, fight_itr->seconduser.attacktype, fight_itr->firstuser.blocktype, (bool)fight_itr->seconduser.energy, room_itr->heroes2.at(pos2).rarity);
 
 
+
     _rooms.modify(room_itr, MAINCONTRACT, [&](auto& mod_room){
         if(mod_room.heroes1.at(pos1).health > damage2)
         {
@@ -560,6 +665,47 @@ ACTION darkcountryf::receiverand (uint64_t customer_id, const eosio::checksum256
         }
         mod_room.timestamp = eosio::current_time_point().sec_since_epoch();
     });
+
+    killtables _kills(MAINCONTRACT, MAINCONTRACT.value);
+    auto kill_itr1 = _kills.find(room_itr->username1.value);
+    if(kill_itr1 == _kills.end())
+    {
+        _kills.emplace(MAINCONTRACT,[&](auto& new_kill){
+            new_kill.username = room_itr->username1;
+            new_kill.totaldamage = damage1;
+            if(room_itr->heroes2.at(pos2).health == 0)
+            new_kill.kills = 1;
+        });
+    }
+    else 
+    {
+        _kills.modify(kill_itr1, MAINCONTRACT,[&](auto& new_kill){
+            new_kill.totaldamage += damage1;
+            if(room_itr->heroes2.at(pos2).health == 0)
+            new_kill.kills++;
+        });
+    }
+
+
+
+    auto kill_itr2 = _kills.find(room_itr->username2.value);
+    if(kill_itr2 == _kills.end())
+    {
+        _kills.emplace(MAINCONTRACT,[&](auto& new_kill){
+            new_kill.username = room_itr->username2;
+            new_kill.totaldamage = damage2;
+            if(room_itr->heroes1.at(pos1).health == 0)
+            new_kill.kills = 1;
+        });
+    }
+    else 
+    {
+        _kills.modify(kill_itr2, MAINCONTRACT,[&](auto& new_kill){
+            new_kill.totaldamage += damage2;
+            if(room_itr->heroes1.at(pos1).health == 0)
+            new_kill.kills++;
+        });
+    }
 
     _fights.modify(fight_itr,MAINCONTRACT,[&](auto& mod_fight){
         mod_fight.firstuser.damage = damage1;
@@ -723,19 +869,38 @@ ACTION darkcountryf::endgame(uint64_t roomid)
 
     }
 
-    eosio::action returnHeroes = eosio::action(
-        eosio::permission_level{MAINCONTRACT, eosio::name("active")},
-        ATOMICCONTRACT,
-        eosio::name("transfer"),
-        std::make_tuple(MAINCONTRACT, room_itr->username1, room_itr->nftheroes1,std::string("Return heroes from Heroes Fight.")));
-    returnHeroes.send();
+    if(room_itr->gametype == 0)
+    {
+        eosio::action returnHeroes = eosio::action(
+            eosio::permission_level{MAINCONTRACT, eosio::name("active")},
+            ATOMICCONTRACT,
+            eosio::name("transfer"),
+            std::make_tuple(MAINCONTRACT, room_itr->username1, room_itr->nftheroes1,std::string("Return heroes from Heroes Fight.")));
+        returnHeroes.send();
 
-    eosio::action return1Heroes = eosio::action(
-        eosio::permission_level{MAINCONTRACT, eosio::name("active")},
-        ATOMICCONTRACT,
-        eosio::name("transfer"),
-        std::make_tuple(MAINCONTRACT, room_itr->username2, room_itr->nftheroes2,std::string("Return heroes from Heroes Fight.")));
-    return1Heroes.send();
+        eosio::action return1Heroes = eosio::action(
+            eosio::permission_level{MAINCONTRACT, eosio::name("active")},
+            ATOMICCONTRACT,
+            eosio::name("transfer"),
+            std::make_tuple(MAINCONTRACT, room_itr->username2, room_itr->nftheroes2,std::string("Return heroes from Heroes Fight.")));
+        return1Heroes.send();
+    } 
+    else if(room_itr->gametype == 1)
+    {
+        heroes _heroes(MAINCONTRACT, MAINCONTRACT.value);
+        for (int i = 0; i < room_itr->nftheroes1.size(); i++)
+        {
+            auto hero_itr = _heroes.find(room_itr->nftheroes1.at(i));
+            eosio::check(hero_itr != _heroes.end(),"Hero doesn't exist in game.");
+            _heroes.erase(hero_itr);
+        }
+        for (int i = 0; i < room_itr->nftheroes2.size(); i++)
+        {
+            auto hero_itr = _heroes.find(room_itr->nftheroes2.at(i));
+            eosio::check(hero_itr != _heroes.end(),"Hero doesn't exist in game.");
+            _heroes.erase(hero_itr);
+        }
+    }
 
     eosio::action gameLog = eosio::action(
         eosio::permission_level{MAINCONTRACT, eosio::name("active")},
@@ -768,7 +933,7 @@ ACTION darkcountryf::cleanrooms()
             }
             room_itr = _rooms.erase(room_itr);
         }
-        else if ((room_itr->status != 4)&&(room_itr->timestamp+30 <= (uint64_t)eosio::current_time_point().sec_since_epoch()))
+        else if ((room_itr->status != 4)&&(room_itr->timestamp+300 <= (uint64_t)eosio::current_time_point().sec_since_epoch()))
         {
              eosio::action returnHeroes = eosio::action(
                 eosio::permission_level{MAINCONTRACT, eosio::name("active")},
@@ -890,23 +1055,23 @@ uint64_t darkcountryf::setdamage(uint64_t randnumb, std::string attacktype, std:
     double base = 0.0;
     if (rarity == 1)
     {
-        base = 2.0;
+        base = 3.0;
     }
     else if (rarity == 2)
     {
-        base = 2.2;
+        base = 3.3;
     }
     else if (rarity == 3)
     {
-        base = 2.6;
+        base = 3.9;
     }
     else if (rarity == 4)
     {
-        base = 3.0;
+        base = 4.5;
     }
     else if (rarity == 5)
     {
-        base = 4.0;
+        base = 6.0;
     }
 
     if(attacktype == "1")
@@ -1006,7 +1171,7 @@ extern "C" void apply(uint64_t receiver, uint64_t code, uint64_t action)
   {
     switch (action)
     {
-      EOSIO_DISPATCH_HELPER(darkcountryf, (createroom)(addtoroom)(deleteroom)(setchance)(returnheroes)(turn)(endturn)(fight)(receiverand)(delgame)(endgame)(deluser)(logfight)(cleanrooms)(deserialize)(endgamelog))
+      EOSIO_DISPATCH_HELPER(darkcountryf, (createroom)(addtoroom)(deleteroom)(addheroes)(setchance)(returnheroes)(turn)(endturn)(fight)(receiverand)(delgame)(endgame)(deluser)(logfight)(cleanrooms)(deserialize)(endgamelog))
     }
   }
   else if (code == ATOMICCONTRACT.value && action == eosio::name("transfer").value)

@@ -42,12 +42,13 @@ CONTRACT darkcountryf : public eosio::contract {
     //transfer action from atomic
     ACTION transferatom(eosio::name from, eosio::name to, std::vector<uint64_t> asset_ids, std::string memo);
     ACTION returnheroes(eosio::name username, uint64_t roomid);
+    ACTION addheroes(eosio::name from, std::vector<uint64_t> asset_ids);
 
     ACTION deserialize(eosio::name username, hero_s hero1, hero_s hero2, hero_s hero3);
 
     //room actions
-    ACTION createroom(eosio::name username, std::vector<uint64_t> heroes, uint64_t timestamp);
-    ACTION addtoroom(uint64_t roomid, eosio::name username, std::vector<uint64_t> heroes, uint64_t timestamp);
+    ACTION createroom(eosio::name username, std::vector<uint64_t> heroes, uint64_t timestamp, uint8_t gametype);
+    ACTION addtoroom(uint64_t roomid, eosio::name username, std::vector<uint64_t> heroes, uint64_t timestamp, uint8_t gametype);
     ACTION deleteroom(uint64_t roomid);
     ACTION cleanrooms();
 
@@ -103,7 +104,7 @@ CONTRACT darkcountryf : public eosio::contract {
     gameset _gstate;
 
 
-    TABLE gameroom
+    TABLE gamesroom
     {
         uint64_t roomid{0};
         eosio::name username1;
@@ -115,11 +116,12 @@ CONTRACT darkcountryf : public eosio::contract {
         std::vector<uint64_t> nftheroes2;
         uint64_t timestamp{0};
         uint8_t status{0};
+        uint8_t gametype{0};
 
         uint64_t primary_key() const {return roomid;}
     };
 
-    typedef eosio::multi_index<eosio::name("gamerooms"), gameroom> rooms;
+    typedef eosio::multi_index<eosio::name("gamesrooms"), gamesroom> rooms;
 
     TABLE fightlog
     {
@@ -141,6 +143,26 @@ CONTRACT darkcountryf : public eosio::contract {
     };
 
     typedef eosio::multi_index<eosio::name("usergames"), usergame> usersingames;
+
+    TABLE hero
+    {
+        uint64_t heroid{0};
+
+        uint64_t primary_key() const {return heroid;}
+    };
+
+    typedef eosio::multi_index<eosio::name("heroes"), hero> heroes;
+
+    TABLE killtable
+    {
+        eosio::name username;
+        uint64_t kills{0};
+        uint64_t totaldamage{0};
+
+        uint64_t primary_key() const {return username.value;}
+    };
+
+    typedef eosio::multi_index<eosio::name("killtables"), killtable> killtables;
 
     //////////////////////////////////////////////////////////
     //   atomic tables
