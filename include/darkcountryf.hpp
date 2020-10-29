@@ -164,6 +164,17 @@ CONTRACT darkcountryf : public eosio::contract {
 
     typedef eosio::multi_index<eosio::name("killtables"), killtable> killtables;
 
+    TABLE missround
+    {
+        eosio::name username;
+        uint8_t rounds{0};
+
+        uint64_t primary_key() const {return username.value;}
+    };
+
+    typedef eosio::multi_index<eosio::name("missrounds"), missround> missrounds;
+
+
 
 
     //////////////////////////////////////////////////////////

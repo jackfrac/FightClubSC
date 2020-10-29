@@ -479,6 +479,20 @@
             ]
         },
         {
+            "name": "missround",
+            "base": "",
+            "fields": [
+                {
+                    "name": "username",
+                    "type": "name"
+                },
+                {
+                    "name": "rounds",
+                    "type": "uint8"
+                }
+            ]
+        },
+        {
             "name": "player_s",
             "base": "",
             "fields": [
@@ -795,6 +809,13 @@
         {
             "name": "lboards",
             "type": "lboard",
+            "index_type": "i64",
+            "key_names": [],
+            "key_types": []
+        },
+        {
+            "name": "missrounds",
+            "type": "missround",
             "index_type": "i64",
             "key_names": [],
             "key_types": []

@@ -126,7 +126,7 @@ ACTION darkcountryf::addheroes(eosio::name from, std::vector<uint64_t> asset_ids
 {
     require_auth(from);
 
-    eosio::check(asset_ids.size() == 3, "Sorry, you must transfer three heroes on one transaction.");
+    eosio::check(asset_ids.size() == 3, "Sorry, you must pick three heroes.");
 
     assets _atomicass(eosio::name("atomicassets"), from.value);
     
@@ -386,6 +386,11 @@ ACTION darkcountryf::turn(eosio::name username, std::string attack, std::string 
     auto user_itr = _usersingames.find(username.value);
     eosio::check(user_itr != _usersingames.end(),"User doesn't play game now.");
 
+    missrounds _miss(MAINCONTRACT, MAINCONTRACT.value);
+    auto miss_itr = _miss.find(username.value);
+    if(miss_itr != _miss.end())
+        _miss.erase(miss_itr);
+
     rooms _rooms(MAINCONTRACT,MAINCONTRACT.value);
     auto room_itr = _rooms.find(user_itr->roomid);
     eosio::check(room_itr != _rooms.end(),"Couldn't find room.");
@@ -514,10 +519,12 @@ ACTION darkcountryf::endturn(eosio::name username)
     auto fight_itr = _fights.find(user_itr->roomid);
     eosio::check(fight_itr != _fights.end(),"Fight doesn't finded.");
 
-    //TODO not empty
+    eosio::name missplayer;
+
     if(!fight_itr->firstuser.heroname.empty())
     {
         require_auth(fight_itr->firstuser.username);
+        missplayer = room_itr->username2;
         _fights.modify(fight_itr, MAINCONTRACT,[&](auto& mod_fight){
             mod_fight.seconduser.username = room_itr->username2;
             mod_fight.seconduser.heroname = getheroname(room_itr->heroes2);
@@ -530,6 +537,7 @@ ACTION darkcountryf::endturn(eosio::name username)
     else if(!fight_itr->seconduser.heroname.empty())
     {
         require_auth(fight_itr->seconduser.username);
+        missplayer = room_itr->username1;
         _fights.modify(fight_itr, MAINCONTRACT,[&](auto& mod_fight){
             mod_fight.firstuser.username = room_itr->username1;
             mod_fight.firstuser.heroname = getheroname(room_itr->heroes1);
@@ -544,10 +552,61 @@ ACTION darkcountryf::endturn(eosio::name username)
         return;
     }
 
+    uint8_t miss_rounds = 0;
+
+    missrounds _miss(MAINCONTRACT, MAINCONTRACT.value);
+    auto miss_itr = _miss.find(missplayer.value);
+    if(miss_itr == _miss.end())
+    {
+        _miss.emplace(MAINCONTRACT, [&](auto& new_miss){
+            new_miss.username = missplayer;
+            new_miss.rounds = 1;
+        });
+        miss_rounds = 1;
+    }
+    else
+    {
+        _miss.modify(miss_itr, MAINCONTRACT, [&](auto& mod_miss){
+            mod_miss.rounds++;
+        });
+        miss_rounds = miss_itr->rounds;
+    }
+
+
     _rooms.modify(room_itr, MAINCONTRACT, [&](auto& mod_room){
-        mod_room.status = 2;
+        if(miss_rounds >= 5)
+        {
+            mod_room.status = 4; 
+            if(missplayer == mod_room.username1)
+            {
+                mod_room.heroes1[0].health = 0;
+                mod_room.heroes1[1].health = 0;
+                mod_room.heroes1[2].health = 0;
+            }
+            else
+            {
+                mod_room.heroes2[0].health = 0;
+                mod_room.heroes2[1].health = 0;
+                mod_room.heroes2[2].health = 0;
+            }
+        }
+        else
+        {
+            mod_room.status = 2;
+        }
         mod_room.timestamp = eosio::current_time_point().sec_since_epoch();
     });
+
+    if(miss_rounds >= 5)
+    {
+        _miss.erase(miss_itr);
+        eosio::action logFight = eosio::action(
+            eosio::permission_level{MAINCONTRACT, eosio::name("active")},
+            MAINCONTRACT,
+            eosio::name("endgame"),
+            std::make_tuple(room_itr->roomid));
+        logFight.send();
+    }
 }
 
 ACTION darkcountryf::fight(uint64_t roomid, eosio::name username1, std::string attacktype1, std::string block1, 
