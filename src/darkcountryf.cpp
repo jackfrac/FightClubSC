@@ -144,10 +144,10 @@ ACTION darkcountryf::addheroes(eosio::name from, std::vector<uint64_t> asset_ids
         eosio::check(asset_itr->collection_name == HEROCONTRACT, "Wrong asset collection.");
         eosio::check((asset_itr->schema_name == eosio::name("rareheroes")) || (asset_itr->schema_name == eosio::name("epicheroes")) || (asset_itr->schema_name == eosio::name("legheroes")) || (asset_itr->schema_name == eosio::name("mythheroes")) || (asset_itr->schema_name == eosio::name("dcheroes")),"Wrong asset(schema).");
 
-        auto hero_itr = _heroes.find(asset_itr->asset_id);
+        auto hero_itr = _heroes.find(asset_ids.at(i));
         eosio::check(hero_itr == _heroes.end(),"Hero is in game.");
         _heroes.emplace(MAINCONTRACT,[&](auto& new_hero){
-            new_hero.heroid = asset_itr->asset_id;
+            new_hero.heroid = asset_ids.at(i);
         });
     }
 
@@ -160,7 +160,7 @@ ACTION darkcountryf::addheroes(eosio::name from, std::vector<uint64_t> asset_ids
             eosio::permission_level{MAINCONTRACT, eosio::name("active")},
             MAINCONTRACT,
             eosio::name("createroom"),
-            std::make_tuple(from, asset_ids, (uint64_t)eosio::current_time_point().sec_since_epoch())
+            std::make_tuple(from, asset_ids, (uint64_t)eosio::current_time_point().sec_since_epoch(),1)
         );
         createRoom.send();
     }
@@ -757,16 +757,21 @@ ACTION darkcountryf::endgame(uint64_t roomid)
     _usersingames.erase(user_itr);
 
     eosio::name winner, loser;
+    int win_hero_points = 0, lose_hero_points = 0;
 
     if(room_itr->heroes1[2].health == 0)
     {
         winner = room_itr->username2;
+        win_hero_points = setheropoints(room_itr->heroes2);
         loser = room_itr->username1;
+        lose_hero_points = setheropoints(room_itr->heroes1);
     }
     else
     {
         loser = room_itr->username2;
+        lose_hero_points = setheropoints(room_itr->heroes2);
         winner = room_itr->username1;
+        win_hero_points = setheropoints(room_itr->heroes1);
     }
 
 
@@ -796,13 +801,16 @@ ACTION darkcountryf::endgame(uint64_t roomid)
         lose_points = 0;
     }
 
+
+    int end_hero_points = win_hero_points - lose_hero_points;
+
     if(win_points > lose_points)
     {
         eosio::action updatePoint = eosio::action(
             eosio::permission_level{MAINCONTRACT, eosio::name("active")},
             NESTCONTRACT,
             eosio::name("update"),
-            std::make_tuple((uint64_t)2, winner, (double)23.0,std::string("")));
+            std::make_tuple((uint64_t)2, winner, (double)(23-end_hero_points),std::string("")));
         updatePoint.send();
 
         double del_points;
@@ -820,7 +828,7 @@ ACTION darkcountryf::endgame(uint64_t roomid)
             eosio::permission_level{MAINCONTRACT, eosio::name("active")},
             NESTCONTRACT,
             eosio::name("update"),
-            std::make_tuple((uint64_t)2, loser, (double)del_points,std::string("")));
+            std::make_tuple((uint64_t)2, loser, (double)(del_points+end_hero_points),std::string("")));
         update1Point.send();
     }
     else if (win_points < lose_points)
@@ -829,7 +837,7 @@ ACTION darkcountryf::endgame(uint64_t roomid)
             eosio::permission_level{MAINCONTRACT, eosio::name("active")},
             NESTCONTRACT,
             eosio::name("update"),
-            std::make_tuple((uint64_t)2, winner, (double)27.0,std::string("")));
+            std::make_tuple((uint64_t)2, winner, (double)(27-end_hero_points),std::string("")));
         updatePoint.send();
 
         double del_points;
@@ -847,7 +855,7 @@ ACTION darkcountryf::endgame(uint64_t roomid)
             eosio::permission_level{MAINCONTRACT, eosio::name("active")},
             NESTCONTRACT,
             eosio::name("update"),
-            std::make_tuple((uint64_t)2, loser, (double)del_points,std::string("")));
+            std::make_tuple((uint64_t)2, loser, (double)(del_points+end_hero_points),std::string("")));
         update1Point.send();
     }
     else
@@ -856,7 +864,7 @@ ACTION darkcountryf::endgame(uint64_t roomid)
             eosio::permission_level{MAINCONTRACT, eosio::name("active")},
             NESTCONTRACT,
             eosio::name("update"),
-            std::make_tuple((uint64_t)2, winner, (double)23.0,std::string("")));
+            std::make_tuple((uint64_t)2, winner, (double)(23-end_hero_points),std::string("")));
         updatePoint.send();
 
 
@@ -875,7 +883,7 @@ ACTION darkcountryf::endgame(uint64_t roomid)
             eosio::permission_level{MAINCONTRACT, eosio::name("active")},
             NESTCONTRACT,
             eosio::name("update"),
-            std::make_tuple((uint64_t)2, loser, (double)del_points,std::string("")));
+            std::make_tuple((uint64_t)2, loser, (double)(del_points+end_hero_points),std::string("")));
         update1Point.send();
 
     }
@@ -1197,6 +1205,16 @@ int darkcountryf::finder(std::vector<player_s> players, eosio::name username)
         }
     }
     return -1;
+}
+
+int darkcountryf::setheropoints(std::vector<hero_s> heroes_ids)
+{
+    int points = 0;
+    for(int i = 0; i < heroes_ids.size(); i++)
+    {
+        points += heroes_ids.at(i).rarity;
+    }
+    return points;
 }
 
 extern "C" void apply(uint64_t receiver, uint64_t code, uint64_t action)

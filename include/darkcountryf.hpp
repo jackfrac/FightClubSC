@@ -164,6 +164,8 @@ CONTRACT darkcountryf : public eosio::contract {
 
     typedef eosio::multi_index<eosio::name("killtables"), killtable> killtables;
 
+
+
     //////////////////////////////////////////////////////////
     //   atomic tables
     //////////////////////////////////////////////////////////
@@ -243,4 +245,5 @@ CONTRACT darkcountryf : public eosio::contract {
     uint64_t setdamage(uint64_t randnumb, std::string attacktype, std::string blocktype, bool specialatk, uint8_t rarity);
     uint8_t findhero(std::vector<hero_s> herovec);
     int finder(std::vector<player_s> players, eosio::name username);
+    int setheropoints(std::vector<hero_s> heroes_ids);
 };
