@@ -11,6 +11,7 @@
 #define HEROCONTRACT eosio::name("darkcountryh")
 #define ATOMICCONTRACT eosio::name("atomicassets")
 #define NESTCONTRACT eosio::name("nestplatform")
+#define BCHEROCONTRACT eosio::name("officialhero")
 
 
 CONTRACT darkcountryf : public eosio::contract {

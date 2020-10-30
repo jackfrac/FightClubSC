@@ -48,29 +48,29 @@ ACTION darkcountryf::transferatom(eosio::name from, eosio::name to, std::vector<
     if (to != MAINCONTRACT)
     return;
 
-    eosio::check(!asset_ids.empty(), "Vector is empty");
+    eosio::check(!asset_ids.empty(), "No heroes transferred.");
     eosio::check(memo.size() <= 256, "memo has more than 256 bytes");
     eosio::check(asset_ids.size() == 3, "Sorry, you must transfer three heroes on one transaction.");
 
     assets _atomicass(eosio::name("atomicassets"), MAINCONTRACT.value);
     auto asset_itr = _atomicass.find(asset_ids.at(0));
-    eosio::check(asset_itr != _atomicass.end(), "Can't find asset.");
+    eosio::check(asset_itr != _atomicass.end(), "Asset cannot be found.");
     eosio::check(asset_itr->collection_name == HEROCONTRACT, "Wrong asset collection.");
-    eosio::check((asset_itr->schema_name == eosio::name("rareheroes")) || (asset_itr->schema_name == eosio::name("epicheroes")) || (asset_itr->schema_name == eosio::name("legheroes")) || (asset_itr->schema_name == eosio::name("mythheroes")) || (asset_itr->schema_name == eosio::name("dcheroes")),"Wrong asset(schema).");
+    eosio::check((asset_itr->schema_name == eosio::name("rareheroes")) || (asset_itr->schema_name == eosio::name("epicheroes")) || (asset_itr->schema_name == eosio::name("legheroes")) || (asset_itr->schema_name == eosio::name("mythheroes")) || (asset_itr->schema_name == eosio::name("dcheroes")),"Wrong asset schema.");
 
     usersingames _usersingames(MAINCONTRACT, MAINCONTRACT.value);
     auto user_itr = _usersingames.find(from.value);
-    eosio::check(user_itr == _usersingames.end(),"User plays game now.");
+    eosio::check(user_itr == _usersingames.end(),"User is in game already.");
 
     //check are all items with one rarity
     for(int i = 1; i < asset_ids.size(); i++)
     {
         asset_itr = _atomicass.find(asset_ids.at(i));
-        eosio::check(asset_itr != _atomicass.end(), "Can't find asset.");
+        eosio::check(asset_itr != _atomicass.end(), "Asset cannot be found.");
         eosio::check(asset_itr->collection_name == HEROCONTRACT, "Wrong asset collection.");
 
         asset_itr = _atomicass.find(asset_ids.at(1));
-        eosio::check((asset_itr->schema_name == eosio::name("rareheroes")) || (asset_itr->schema_name == eosio::name("epicheroes")) || (asset_itr->schema_name == eosio::name("legheroes")) || (asset_itr->schema_name == eosio::name("mythheroes")) || (asset_itr->schema_name == eosio::name("dcheroes")),"Wrong asset(schema).");
+        eosio::check((asset_itr->schema_name == eosio::name("rareheroes")) || (asset_itr->schema_name == eosio::name("epicheroes")) || (asset_itr->schema_name == eosio::name("legheroes")) || (asset_itr->schema_name == eosio::name("mythheroes")) || (asset_itr->schema_name == eosio::name("dcheroes")),"Wrong asset schema.");
     }
 
     rooms _rooms(MAINCONTRACT, MAINCONTRACT.value);
@@ -132,20 +132,36 @@ ACTION darkcountryf::addheroes(eosio::name from, std::vector<uint64_t> asset_ids
     
     usersingames _usersingames(MAINCONTRACT, MAINCONTRACT.value);
     auto user_itr = _usersingames.find(from.value);
-    eosio::check(user_itr == _usersingames.end(),"User plays game now.");
+    eosio::check(user_itr == _usersingames.end(),"User is in game already.");
 
     heroes _heroes(MAINCONTRACT, MAINCONTRACT.value);
+
+    //eosio::name collection;
+
+    /*auto asset_itr = _atomicass.find(asset_ids.at(0));
+    eosio::check(asset_itr != _atomicass.end(), "Can't find asset.");
+    if (asset_itr->collection_name == HEROCONTRACT)
+    {
+        collection = HEROCONTRACT;
+    }
+    else if (asset_itr->collection_name == BCHEROCONTRACT)
+    {
+        collection = BCHEROCONTRACT;
+    } 
+    eosio::check(asset_itr->collection_name == HEROCONTRACT, "Wrong asset collection.");
+    eosio::check((asset_itr->schema_name == eosio::name("rareheroes")) || (asset_itr->schema_name == eosio::name("epicheroes")) || (asset_itr->schema_name == eosio::name("legheroes")) || (asset_itr->schema_name == eosio::name("mythheroes")) || (asset_itr->schema_name == eosio::name("dcheroes")),"Wrong asset(schema).");
+*/
 
     //check are all items with one rarity
     for(int i = 0; i < asset_ids.size(); i++)
     {
         auto asset_itr = _atomicass.find(asset_ids.at(i));
-        eosio::check(asset_itr != _atomicass.end(), "Can't find asset.");
+        eosio::check(asset_itr != _atomicass.end(), "Asset cannot be found.");
         eosio::check(asset_itr->collection_name == HEROCONTRACT, "Wrong asset collection.");
-        eosio::check((asset_itr->schema_name == eosio::name("rareheroes")) || (asset_itr->schema_name == eosio::name("epicheroes")) || (asset_itr->schema_name == eosio::name("legheroes")) || (asset_itr->schema_name == eosio::name("mythheroes")) || (asset_itr->schema_name == eosio::name("dcheroes")),"Wrong asset(schema).");
+        eosio::check((asset_itr->schema_name == eosio::name("rareheroes")) || (asset_itr->schema_name == eosio::name("epicheroes")) || (asset_itr->schema_name == eosio::name("legheroes")) || (asset_itr->schema_name == eosio::name("mythheroes")) || (asset_itr->schema_name == eosio::name("dcheroes")),"Wrong asset schema.");
 
         auto hero_itr = _heroes.find(asset_ids.at(i));
-        eosio::check(hero_itr == _heroes.end(),"Hero is in game.");
+        eosio::check(hero_itr == _heroes.end(),"Hero is in game already.");
         _heroes.emplace(MAINCONTRACT,[&](auto& new_hero){
             new_hero.heroid = asset_ids.at(i);
         });
@@ -209,7 +225,7 @@ ACTION darkcountryf::returnheroes(eosio::name username, uint64_t roomid)
     rooms _rooms(MAINCONTRACT,MAINCONTRACT.value);
     auto room_itr = _rooms.find(roomid);
     eosio::check(room_itr != _rooms.end(),"Room doesn't exist.");
-    eosio::check((room_itr->status == 100)||(room_itr->status == 101),"Game was started.");
+    eosio::check((room_itr->status == 100)||(room_itr->status == 101),"Game was started already.");
 
     if(room_itr->timestamp+90 <= (uint64_t)eosio::current_time_point().sec_since_epoch() && room_itr->username2==eosio::name("wait"))
     {
@@ -244,7 +260,7 @@ ACTION darkcountryf::returnheroes(eosio::name username, uint64_t roomid)
     }
     else
     {
-        eosio::check(0,"Sorry, you must wain 3 min, before take your heroes back.");
+        eosio::check(0,"You must wait 3 minutes to take your heroes back.");
     }
 }
 
@@ -255,11 +271,11 @@ ACTION darkcountryf::deserialize(eosio::name username, hero_s hero1, hero_s hero
 
     usersingames _usersingames(MAINCONTRACT, MAINCONTRACT.value);
     auto user_itr = _usersingames.find(username.value);
-    eosio::check(user_itr != _usersingames.end(),"User plays game now.");
+    eosio::check(user_itr != _usersingames.end(),"User is in game already.");
 
     rooms _rooms(MAINCONTRACT, MAINCONTRACT.value);
     auto room_itr = _rooms.find(user_itr->roomid);
-    eosio::check(room_itr != _rooms.end(),"Room wasn't created.");
+    eosio::check(room_itr != _rooms.end(),"Room doesn't exist.");
 
     std::vector<hero_s> heroes;
     heroes.push_back(hero1);
@@ -297,7 +313,7 @@ ACTION darkcountryf::createroom(eosio::name username, std::vector<uint64_t> hero
 
     usersingames _usersingames(MAINCONTRACT, MAINCONTRACT.value);
     auto user_itr = _usersingames.find(username.value);
-    eosio::check(user_itr == _usersingames.end(),"User plays game now.");
+    eosio::check(user_itr == _usersingames.end(),"User is in game already.");
 
     rooms _rooms(MAINCONTRACT, MAINCONTRACT.value);
     uint64_t room_id = getroomid();
@@ -328,11 +344,11 @@ ACTION darkcountryf::addtoroom(uint64_t roomid, eosio::name username, std::vecto
 
     usersingames _usersingames(MAINCONTRACT, MAINCONTRACT.value);
     auto user_itr = _usersingames.find(username.value);
-    eosio::check(user_itr == _usersingames.end(),"User plays game now.");
+    eosio::check(user_itr == _usersingames.end(),"User is in game already.");
 
     rooms _rooms(MAINCONTRACT, MAINCONTRACT.value);
     auto room_itr = _rooms.find(roomid);
-    eosio::check(room_itr != _rooms.end(),"Room wasn't created.");
+    eosio::check(room_itr != _rooms.end(),"Room doesn't exist.");
     eosio::check(room_itr->gametype == gametype,"Wrong room game type.");
 
     _rooms.modify(room_itr, MAINCONTRACT, [&](auto& new_room){
@@ -355,7 +371,7 @@ ACTION darkcountryf::deleteroom(uint64_t roomid)
 
     rooms _rooms(MAINCONTRACT, MAINCONTRACT.value);
     auto room_itr = _rooms.find(roomid);
-    eosio::check(room_itr != _rooms.end(),"Room wasn't created.");
+    eosio::check(room_itr != _rooms.end(),"Room doesn't exist.");
     eosio::check((room_itr->status == 4)||(room_itr->username2 == eosio::name("wait")||(room_itr->status == 101)||(room_itr->status == 100)) ,"Game wasn't ended.");
 
     usersingames _usersingames(MAINCONTRACT,MAINCONTRACT.value);
@@ -384,7 +400,7 @@ ACTION darkcountryf::turn(eosio::name username, std::string attack, std::string 
 
     usersingames _usersingames(MAINCONTRACT, MAINCONTRACT.value);
     auto user_itr = _usersingames.find(username.value);
-    eosio::check(user_itr != _usersingames.end(),"User doesn't play game now.");
+    eosio::check(user_itr != _usersingames.end(),"User is not playing game now.");
 
     missrounds _miss(MAINCONTRACT, MAINCONTRACT.value);
     auto miss_itr = _miss.find(username.value);
@@ -393,21 +409,21 @@ ACTION darkcountryf::turn(eosio::name username, std::string attack, std::string 
 
     rooms _rooms(MAINCONTRACT,MAINCONTRACT.value);
     auto room_itr = _rooms.find(user_itr->roomid);
-    eosio::check(room_itr != _rooms.end(),"Couldn't find room.");
-    eosio::check((room_itr->username1 == username)||(room_itr->username2 == username),"Current user doesn't play in this room.");
+    eosio::check(room_itr != _rooms.end(),"Room doesn't exist.");
+    eosio::check((room_itr->username1 == username)||(room_itr->username2 == username),"Current user is not playing in this room.");
     eosio::check((room_itr->status == 0)||(room_itr->status == 1),"Fight phase was ended.");
 
     if(room_itr->username1 == username)
     {    
         uint8_t pos = findhero(room_itr->heroes1);
         if(specialatk)
-        eosio::check(room_itr->heroes1.at(pos).energy >=25,"Your hero haven't enought energy for special attack");
+        eosio::check(room_itr->heroes1.at(pos).energy >=25,"Your hero hasn't enough energy for special attack");
     }
     else
     {
         uint8_t pos = findhero(room_itr->heroes2);
         if(specialatk)
-        eosio::check(room_itr->heroes2.at(pos).energy >=25,"Your hero haven't enought energy for special attack");
+        eosio::check(room_itr->heroes2.at(pos).energy >=25,"Your hero hasn't enough energy for special attack");
     }
 
     fights _fights(MAINCONTRACT, MAINCONTRACT.value);
@@ -437,7 +453,7 @@ ACTION darkcountryf::turn(eosio::name username, std::string attack, std::string 
             }
             else
             {
-                eosio::check(0,"Something come wrong...");
+                eosio::check(0,"Something went wrong...");
             }
         });
     }
@@ -481,7 +497,7 @@ ACTION darkcountryf::turn(eosio::name username, std::string attack, std::string 
             }
             else
             {
-                eosio::check(0,"Something comes wrong...");
+                eosio::check(0,"Something went wrong...");
             }
         });
     }
@@ -506,18 +522,18 @@ ACTION darkcountryf::endturn(eosio::name username)
 {
     usersingames _usersingames(MAINCONTRACT, MAINCONTRACT.value);
     auto user_itr = _usersingames.find(username.value);
-    eosio::check(user_itr != _usersingames.end(),"User doesn't play game now.");
+    eosio::check(user_itr != _usersingames.end(),"User isn't in game already.");
 
     rooms _rooms(MAINCONTRACT,MAINCONTRACT.value);
     auto room_itr = _rooms.find(user_itr->roomid);
-    eosio::check(room_itr != _rooms.end(),"Couldn't find room.");
-    eosio::check((room_itr->username1 == username)||(room_itr->username2 == username),"Current user doesn't play in this room.");
+    eosio::check(room_itr != _rooms.end(),"Room doesn't exist.");
+    eosio::check((room_itr->username1 == username)||(room_itr->username2 == username),"Current user is not playing in this room.");
     eosio::check(room_itr->status == 1,"In this game phase you can't end turn.");
-    eosio::check(room_itr->timestamp+30 <= (uint64_t)eosio::current_time_point().sec_since_epoch(),"Sorry, but you can end turn only, when opponent have not done his turn for 30 sec.");
+    eosio::check(room_itr->timestamp+30 <= (uint64_t)eosio::current_time_point().sec_since_epoch(),"You can end turn when opponent has not done his turn for 30 seconds.");
 
     fights _fights(MAINCONTRACT, MAINCONTRACT.value);
     auto fight_itr = _fights.find(user_itr->roomid);
-    eosio::check(fight_itr != _fights.end(),"Fight doesn't finded.");
+    eosio::check(fight_itr != _fights.end(),"Fight wasn't found.");
 
     eosio::name missplayer;
 
@@ -616,14 +632,14 @@ ACTION darkcountryf::fight(uint64_t roomid, eosio::name username1, std::string a
 
     rooms _rooms(MAINCONTRACT, MAINCONTRACT.value);
     auto room_itr = _rooms.find(roomid);
-    eosio::check(room_itr != _rooms.end(),"Couldn't find room.");
+    eosio::check(room_itr != _rooms.end(),"Room doesn't exist.");
     eosio::check((room_itr->username1 == username1)&&(room_itr->username2 == username2),"One of users doesn't play in this room.");
     eosio::check(room_itr->status == 2,"Fight phase wasn't ended.");
 
     fights _fights(MAINCONTRACT, MAINCONTRACT.value);
     auto fight_itr = _fights.find(roomid);
-    eosio::check(fight_itr != _fights.end(),"No active fights on this room.");
-    eosio::check((fight_itr->firstuser.username == username1)&&(fight_itr->seconduser.username == username2),"Some username is wrong.");
+    eosio::check(fight_itr != _fights.end(),"No active fights in this room.");
+    eosio::check((fight_itr->firstuser.username == username1)&&(fight_itr->seconduser.username == username2),"One of usernames is wrong.");
     
     _fights.modify(fight_itr, MAINCONTRACT, [&](auto& mod_fight){
         mod_fight.firstuser.attacktype = attacktype1;
@@ -665,12 +681,12 @@ ACTION darkcountryf::receiverand (uint64_t customer_id, const eosio::checksum256
 
     rooms _rooms(MAINCONTRACT, MAINCONTRACT.value);
     auto room_itr = _rooms.find(customer_id);
-    eosio::check(room_itr != _rooms.end(),"Couldn't find room.");
+    eosio::check(room_itr != _rooms.end(),"Room doesn't exist.");
     eosio::check(room_itr->status == 2,"Fight phase wasn't ended.");
 
     fights _fights(MAINCONTRACT, MAINCONTRACT.value);
     auto fight_itr = _fights.find(customer_id);
-    eosio::check(fight_itr != _fights.end(),"No active fights on this room.");
+    eosio::check(fight_itr != _fights.end(),"No active fights in this room.");
 
     //get random values
     uint64_t max_value = 1000;
@@ -862,7 +878,7 @@ ACTION darkcountryf::endgame(uint64_t roomid)
 
     rateusers _rate(MAINCONTRACT, MAINCONTRACT.value);
     auto rate_itr = _rate.find(roomid);
-    eosio::check(rate_itr == _rate.end(),"This room rate created.");
+    eosio::check(rate_itr == _rate.end(),"This room rate table was created.");
 
     double winaddrate, loseaddrate;
 
