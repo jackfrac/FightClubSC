@@ -860,18 +860,25 @@ ACTION darkcountryf::endgame(uint64_t roomid)
         lose_points = 0;
     }
 
+    rateusers _rate(MAINCONTRACT, MAINCONTRACT.value);
+    auto rate_itr = _rate.find(roomid);
+    eosio::check(rate_itr == _rate.end(),"This room rate created.");
+
+    double winaddrate, loseaddrate;
 
     int end_hero_points = win_hero_points - lose_hero_points;
 
     if(win_points > lose_points)
     {
+        winaddrate = (double)(23-end_hero_points);
         eosio::action updatePoint = eosio::action(
             eosio::permission_level{MAINCONTRACT, eosio::name("active")},
             NESTCONTRACT,
             eosio::name("update"),
-            std::make_tuple((uint64_t)2, winner, (double)(23-end_hero_points),std::string("")));
+            std::make_tuple((uint64_t)2, winner, winaddrate,std::string("")));
         updatePoint.send();
-
+        
+     
         double del_points;
         if(lose_points >= 22.0)
         {
@@ -882,21 +889,24 @@ ACTION darkcountryf::endgame(uint64_t roomid)
             del_points = lose_points;
         }
         del_points *= -1;
+        
+        loseaddrate = (double)(del_points+end_hero_points);
 
         eosio::action update1Point = eosio::action(
             eosio::permission_level{MAINCONTRACT, eosio::name("active")},
             NESTCONTRACT,
             eosio::name("update"),
-            std::make_tuple((uint64_t)2, loser, (double)(del_points+end_hero_points),std::string("")));
+            std::make_tuple((uint64_t)2, loser, loseaddrate,std::string("")));
         update1Point.send();
     }
     else if (win_points < lose_points)
     {
+        winaddrate = (double)(27-end_hero_points);
         eosio::action updatePoint = eosio::action(
             eosio::permission_level{MAINCONTRACT, eosio::name("active")},
             NESTCONTRACT,
             eosio::name("update"),
-            std::make_tuple((uint64_t)2, winner, (double)(27-end_hero_points),std::string("")));
+            std::make_tuple((uint64_t)2, winner, winaddrate,std::string("")));
         updatePoint.send();
 
         double del_points;
@@ -909,21 +919,24 @@ ACTION darkcountryf::endgame(uint64_t roomid)
             del_points = lose_points;
         }
         del_points *= -1;
-        
+
+        loseaddrate = (double)(del_points+end_hero_points);
+
         eosio::action update1Point = eosio::action(
             eosio::permission_level{MAINCONTRACT, eosio::name("active")},
             NESTCONTRACT,
             eosio::name("update"),
-            std::make_tuple((uint64_t)2, loser, (double)(del_points+end_hero_points),std::string("")));
+            std::make_tuple((uint64_t)2, loser, loseaddrate,std::string("")));
         update1Point.send();
     }
     else
     {
+        winaddrate = (double)(23-end_hero_points);
         eosio::action updatePoint = eosio::action(
             eosio::permission_level{MAINCONTRACT, eosio::name("active")},
             NESTCONTRACT,
             eosio::name("update"),
-            std::make_tuple((uint64_t)2, winner, (double)(23-end_hero_points),std::string("")));
+            std::make_tuple((uint64_t)2, winner, winaddrate,std::string("")));
         updatePoint.send();
 
 
@@ -937,12 +950,14 @@ ACTION darkcountryf::endgame(uint64_t roomid)
             del_points = lose_points;
         }
         del_points *= -1;
+
+        loseaddrate = (double)(del_points+end_hero_points);
         
         eosio::action update1Point = eosio::action(
             eosio::permission_level{MAINCONTRACT, eosio::name("active")},
             NESTCONTRACT,
             eosio::name("update"),
-            std::make_tuple((uint64_t)2, loser, (double)(del_points+end_hero_points),std::string("")));
+            std::make_tuple((uint64_t)2, loser, loseaddrate,std::string("")));
         update1Point.send();
 
     }
@@ -979,6 +994,16 @@ ACTION darkcountryf::endgame(uint64_t roomid)
             _heroes.erase(hero_itr);
         }
     }
+
+    _rate.emplace(MAINCONTRACT, [&](auto& new_rate){
+        new_rate.roomid = roomid;
+        new_rate.winner = winner;
+        new_rate.winrate = win_points;
+        new_rate.winpoints = winaddrate;
+        new_rate.loser = loser;
+        new_rate.loserate = lose_points;
+        new_rate.losepoints = loseaddrate;
+    });
 
     eosio::action gameLog = eosio::action(
         eosio::permission_level{MAINCONTRACT, eosio::name("active")},
@@ -1101,6 +1126,13 @@ ACTION darkcountryf::delgame(uint64_t id)
         user_itr = _usersingames.find(room_itr->username2.value);
         _usersingames.erase(user_itr);
     }
+
+
+    rateusers _rate(MAINCONTRACT, MAINCONTRACT.value);
+    auto rate_itr = _rate.find(id);
+    eosio::check(rate_itr != _rate.end(),"This room rate wasn't created.");
+
+    _rate.erase(rate_itr);
 }
 
 ACTION darkcountryf::deluser(eosio::name username)

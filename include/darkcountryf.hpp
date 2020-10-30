@@ -174,6 +174,21 @@ CONTRACT darkcountryf : public eosio::contract {
 
     typedef eosio::multi_index<eosio::name("missrounds"), missround> missrounds;
 
+    TABLE rateuser
+    {
+        uint64_t roomid;
+        eosio::name winner;
+        double winrate;
+        double winpoints;
+        eosio::name loser;
+        double loserate;
+        double losepoints;
+
+        uint64_t primary_key() const {return roomid;}
+    };
+
+    typedef eosio::multi_index<eosio::name("rateusers"), rateuser> rateusers;
+
 
 
 

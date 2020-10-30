@@ -529,6 +529,40 @@
             ]
         },
         {
+            "name": "rateuser",
+            "base": "",
+            "fields": [
+                {
+                    "name": "roomid",
+                    "type": "uint64"
+                },
+                {
+                    "name": "winner",
+                    "type": "name"
+                },
+                {
+                    "name": "winrate",
+                    "type": "float64"
+                },
+                {
+                    "name": "winpoints",
+                    "type": "float64"
+                },
+                {
+                    "name": "loser",
+                    "type": "name"
+                },
+                {
+                    "name": "loserate",
+                    "type": "float64"
+                },
+                {
+                    "name": "losepoints",
+                    "type": "float64"
+                }
+            ]
+        },
+        {
             "name": "receiverand",
             "base": "",
             "fields": [
@@ -816,6 +850,13 @@
         {
             "name": "missrounds",
             "type": "missround",
+            "index_type": "i64",
+            "key_names": [],
+            "key_types": []
+        },
+        {
+            "name": "rateusers",
+            "type": "rateuser",
             "index_type": "i64",
             "key_names": [],
             "key_types": []
