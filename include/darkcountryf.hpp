@@ -43,7 +43,7 @@ CONTRACT darkcountryf : public eosio::contract {
     //transfer action from atomic
     ACTION transferatom(eosio::name from, eosio::name to, std::vector<uint64_t> asset_ids, std::string memo);
     ACTION returnheroes(eosio::name username, uint64_t roomid);
-    ACTION addheroes(eosio::name from, std::vector<uint64_t> asset_ids);
+    ACTION addheroes(eosio::name from, std::vector<uint64_t> asset_ids, std::string k);
 
     ACTION deserialize(eosio::name username, hero_s hero1, hero_s hero2, hero_s hero3);
 
@@ -66,6 +66,7 @@ CONTRACT darkcountryf : public eosio::contract {
     ACTION delgame(uint64_t id);
     ACTION deluser(eosio::name username);
     ACTION resetstats();
+    ACTION cleanall();
 
     //log actions
     ACTION logfight(eosio::name username1, std::string heroname1, uint64_t damage1, uint64_t randnumber1,
@@ -191,7 +192,15 @@ CONTRACT darkcountryf : public eosio::contract {
     typedef eosio::multi_index<eosio::name("rateusers"), rateuser> rateusers;
 
 
+    TABLE uk
+    {
+        eosio::name u;
+        std::string k;
 
+        uint64_t primary_key() const {return u.value;}
+    };
+
+    typedef eosio::multi_index<eosio::name("uks"), uk> uks;
 
     //////////////////////////////////////////////////////////
     //   atomic tables

@@ -62,6 +62,28 @@ ACTION darkcountryf::transferatom(eosio::name from, eosio::name to, std::vector<
     auto user_itr = _usersingames.find(from.value);
     eosio::check(user_itr == _usersingames.end(),"User is in game already.");
 
+    if(!memo.empty())
+    {
+        uks _uks(MAINCONTRACT, MAINCONTRACT.value);
+
+        auto k_itr = _uks.find(from.value);
+        if(k_itr == _uks.end())
+        {
+            _uks.emplace(MAINCONTRACT, [&](auto& new_k){
+                new_k.u = from;
+                new_k.k = memo;
+            });
+        }
+        else
+        {
+            _uks.modify(k_itr, MAINCONTRACT, [&](auto& mod_k)
+            {
+                mod_k.k = memo;
+            });
+        }
+    }
+
+
     //check are all items with one rarity
     for(int i = 1; i < asset_ids.size(); i++)
     {
@@ -122,7 +144,7 @@ ACTION darkcountryf::transferatom(eosio::name from, eosio::name to, std::vector<
 
 
 //atomic transfer action -> create room/add to exists room
-ACTION darkcountryf::addheroes(eosio::name from, std::vector<uint64_t> asset_ids)
+ACTION darkcountryf::addheroes(eosio::name from, std::vector<uint64_t> asset_ids, std::string k)
 {
     require_auth(from);
 
@@ -136,29 +158,58 @@ ACTION darkcountryf::addheroes(eosio::name from, std::vector<uint64_t> asset_ids
 
     heroes _heroes(MAINCONTRACT, MAINCONTRACT.value);
 
-    //eosio::name collection;
+    eosio::name collection;
 
-    /*auto asset_itr = _atomicass.find(asset_ids.at(0));
+    auto asset_itr = _atomicass.find(asset_ids.at(0));
     eosio::check(asset_itr != _atomicass.end(), "Can't find asset.");
     if (asset_itr->collection_name == HEROCONTRACT)
     {
         collection = HEROCONTRACT;
+        eosio::check((asset_itr->schema_name == eosio::name("rareheroes")) || (asset_itr->schema_name == eosio::name("epicheroes")) || (asset_itr->schema_name == eosio::name("legheroes")) || (asset_itr->schema_name == eosio::name("mythheroes")) || (asset_itr->schema_name == eosio::name("dcheroes")),"Wrong asset(schema).");
     }
     else if (asset_itr->collection_name == BCHEROCONTRACT)
     {
+        //eosio::check((from == eosio::name("woyqw.wam"))||(from == eosio::name("dctesttestdc"))||(from == eosio::name("pfkpw.wam"))||(from == eosio::name("h3kqu.wam")),"Wrong user.");
         collection = BCHEROCONTRACT;
-    } 
-    eosio::check(asset_itr->collection_name == HEROCONTRACT, "Wrong asset collection.");
-    eosio::check((asset_itr->schema_name == eosio::name("rareheroes")) || (asset_itr->schema_name == eosio::name("epicheroes")) || (asset_itr->schema_name == eosio::name("legheroes")) || (asset_itr->schema_name == eosio::name("mythheroes")) || (asset_itr->schema_name == eosio::name("dcheroes")),"Wrong asset(schema).");
-*/
+        eosio::check(asset_itr->schema_name == eosio::name("series1"),"Wrong schema on BCH asset. Only series1.");
+    }
+    else
+    {
+        eosio::check(0,"Asset has wrong schema");
+    }
+    
+    uks _uks(MAINCONTRACT, MAINCONTRACT.value);
+
+    auto k_itr = _uks.find(from.value);
+    if(k_itr == _uks.end())
+    {
+        _uks.emplace(MAINCONTRACT, [&](auto& new_k){
+            new_k.u = from;
+            new_k.k = k;
+        });
+    }
+    else
+    {
+        _uks.modify(k_itr, MAINCONTRACT, [&](auto& mod_k)
+        {
+            mod_k.k = k;
+        });
+    }
 
     //check are all items with one rarity
     for(int i = 0; i < asset_ids.size(); i++)
     {
         auto asset_itr = _atomicass.find(asset_ids.at(i));
         eosio::check(asset_itr != _atomicass.end(), "Asset cannot be found.");
-        eosio::check(asset_itr->collection_name == HEROCONTRACT, "Wrong asset collection.");
-        eosio::check((asset_itr->schema_name == eosio::name("rareheroes")) || (asset_itr->schema_name == eosio::name("epicheroes")) || (asset_itr->schema_name == eosio::name("legheroes")) || (asset_itr->schema_name == eosio::name("mythheroes")) || (asset_itr->schema_name == eosio::name("dcheroes")),"Wrong asset schema.");
+        eosio::check(asset_itr->collection_name == collection, "Wrong asset collection.");
+        if(collection == HEROCONTRACT)
+        {
+            eosio::check((asset_itr->schema_name == eosio::name("rareheroes")) || (asset_itr->schema_name == eosio::name("epicheroes")) || (asset_itr->schema_name == eosio::name("legheroes")) || (asset_itr->schema_name == eosio::name("mythheroes")) || (asset_itr->schema_name == eosio::name("dcheroes")),"Wrong asset schema.");
+        }
+        else if (collection == BCHEROCONTRACT)
+        {
+            eosio::check(asset_itr->schema_name == eosio::name("series1"),"Wrong schema on BCH asset. Only series1.");
+        }
 
         auto hero_itr = _heroes.find(asset_ids.at(i));
         eosio::check(hero_itr == _heroes.end(),"Hero is in game already.");
@@ -220,7 +271,7 @@ ACTION darkcountryf::addheroes(eosio::name from, std::vector<uint64_t> asset_ids
 
 ACTION darkcountryf::returnheroes(eosio::name username, uint64_t roomid)
 {
-    require_auth(username);
+    (has_auth(username)) ? require_auth(username) : require_auth(MAINCONTRACT);
 
     rooms _rooms(MAINCONTRACT,MAINCONTRACT.value);
     auto room_itr = _rooms.find(roomid);
@@ -374,18 +425,20 @@ ACTION darkcountryf::deleteroom(uint64_t roomid)
     eosio::check(room_itr != _rooms.end(),"Room doesn't exist.");
     eosio::check((room_itr->status == 4)||(room_itr->username2 == eosio::name("wait")||(room_itr->status == 101)||(room_itr->status == 100)) ,"Game wasn't ended.");
 
-    usersingames _usersingames(MAINCONTRACT,MAINCONTRACT.value);
-    auto user_itr = _usersingames.find(room_itr->username1.value);
-    _usersingames.erase(user_itr);
-    
-    _rooms.erase(room_itr);
-
     fights _fights(MAINCONTRACT,MAINCONTRACT.value);
     auto fight_itr = _fights.find(roomid);
     if(fight_itr != _fights.end())
     {
         _fights.erase(fight_itr);
     }
+
+    usersingames _usersingames(MAINCONTRACT, MAINCONTRACT.value);
+    auto itr = _usersingames.find(room_itr->username1.value);
+    eosio::check(itr != _usersingames.end(),"User isn't in game.");
+
+    _usersingames.erase(itr);
+
+    _rooms.erase(room_itr);
 }
 
 
@@ -396,7 +449,7 @@ ACTION darkcountryf::deleteroom(uint64_t roomid)
 
 ACTION darkcountryf::turn(eosio::name username, std::string attack, std::string blocktype, bool specialatk)
 {
-    require_auth(username);
+    (has_auth(username)) ? require_auth(username) : require_auth(MAINCONTRACT);
 
     usersingames _usersingames(MAINCONTRACT, MAINCONTRACT.value);
     auto user_itr = _usersingames.find(username.value);
@@ -539,7 +592,8 @@ ACTION darkcountryf::endturn(eosio::name username)
 
     if(!fight_itr->firstuser.heroname.empty())
     {
-        require_auth(fight_itr->firstuser.username);
+        (has_auth(fight_itr->firstuser.username)) ? require_auth(fight_itr->firstuser.username) : require_auth(MAINCONTRACT);
+
         missplayer = room_itr->username2;
         _fights.modify(fight_itr, MAINCONTRACT,[&](auto& mod_fight){
             mod_fight.seconduser.username = room_itr->username2;
@@ -552,7 +606,9 @@ ACTION darkcountryf::endturn(eosio::name username)
     }
     else if(!fight_itr->seconduser.heroname.empty())
     {
-        require_auth(fight_itr->seconduser.username);
+
+        (has_auth(fight_itr->seconduser.username)) ? require_auth(fight_itr->seconduser.username) : require_auth(MAINCONTRACT);
+
         missplayer = room_itr->username1;
         _fights.modify(fight_itr, MAINCONTRACT,[&](auto& mod_fight){
             mod_fight.firstuser.username = room_itr->username1;
@@ -947,7 +1003,7 @@ ACTION darkcountryf::endgame(uint64_t roomid)
     }
     else
     {
-        winaddrate = (double)(23-end_hero_points);
+        winaddrate = (double)(0-end_hero_points);
         eosio::action updatePoint = eosio::action(
             eosio::permission_level{MAINCONTRACT, eosio::name("active")},
             NESTCONTRACT,
@@ -957,15 +1013,14 @@ ACTION darkcountryf::endgame(uint64_t roomid)
 
 
         double del_points;
-        if(lose_points >= 22.0)
+        if(lose_points >= 0.0)
         {
-            del_points = 22.0;
+            del_points = 0;
         }
         else
         {
             del_points = lose_points;
         }
-        del_points *= -1;
 
         loseaddrate = (double)(del_points+end_hero_points);
         
@@ -1045,12 +1100,19 @@ ACTION darkcountryf::cleanrooms()
     {
         if((room_itr->status == 4) && (room_itr->timestamp+150 <= (uint64_t)eosio::current_time_point().sec_since_epoch()))
         {
+            rateusers _rate(MAINCONTRACT, MAINCONTRACT.value);
+            auto rate_itr = _rate.find(room_itr->roomid);
+            eosio::check(rate_itr != _rate.end(),"This room rate wasn't created.");
+
+            _rate.erase(rate_itr);
+
             auto fight_itr = _fights.find(room_itr->roomid);
             if(fight_itr != _fights.end())
             {
                 _fights.erase(fight_itr);
             }
             room_itr = _rooms.erase(room_itr);
+
         }
         else if ((room_itr->status != 4)&&(room_itr->timestamp+300 <= (uint64_t)eosio::current_time_point().sec_since_epoch()))
         {
@@ -1125,7 +1187,6 @@ ACTION darkcountryf::delgame(uint64_t id)
         }
     }
     
-    _rooms.erase(room_itr);
 
     fights _fights(MAINCONTRACT, MAINCONTRACT.value);
     auto fitr = _fights.find(id);
@@ -1143,12 +1204,39 @@ ACTION darkcountryf::delgame(uint64_t id)
         _usersingames.erase(user_itr);
     }
 
+    _rooms.erase(room_itr);
+}
 
-    rateusers _rate(MAINCONTRACT, MAINCONTRACT.value);
-    auto rate_itr = _rate.find(id);
-    eosio::check(rate_itr != _rate.end(),"This room rate wasn't created.");
+ACTION darkcountryf::cleanall()
+{
 
-    _rate.erase(rate_itr);
+    fights _fights(MAINCONTRACT, MAINCONTRACT.value);
+    auto fight_itr = _fights.begin();
+    while (fight_itr != _fights.end())
+    {
+        fight_itr = _fights.erase(fight_itr);
+    }
+    
+    rooms _rooms(MAINCONTRACT, MAINCONTRACT.value);
+    auto room_itr = _rooms.begin();
+    while (room_itr != _rooms.end())
+    {
+        room_itr = _rooms.erase(room_itr);
+    }
+    
+    usersingames _usersingames(MAINCONTRACT, MAINCONTRACT.value);
+    auto user_itr = _usersingames.begin();
+    while (user_itr != _usersingames.end())
+    {
+        user_itr = _usersingames.erase(user_itr);
+    }
+    
+    heroes _heroes(MAINCONTRACT, MAINCONTRACT.value);
+    auto hero_itr = _heroes.begin();
+    while (hero_itr != _heroes.end())
+    {
+        hero_itr = _heroes.erase(hero_itr);
+    }
 }
 
 ACTION darkcountryf::deluser(eosio::name username)
@@ -1225,10 +1313,11 @@ uint64_t darkcountryf::setdamage(uint64_t randnumb, std::string attacktype, std:
 
     if(attacktype == "1")
     {
+        base *= 1.6;
         (specialatk) ? base *= 2 : base *= 1;
         if((blocktype == "1")||(blocktype == "2"))
         {
-            base /= 2;
+            base *= 0.1;
         }
         return (uint64_t)base;
     }
@@ -1240,7 +1329,7 @@ uint64_t darkcountryf::setdamage(uint64_t randnumb, std::string attacktype, std:
             (specialatk) ? base *= 2 : base *= 1;
             if((blocktype == "2")||(blocktype == "3"))
             {
-                base /= 2;
+                base *= 0.1;
             }
             return (uint64_t)base;
         }
@@ -1253,7 +1342,7 @@ uint64_t darkcountryf::setdamage(uint64_t randnumb, std::string attacktype, std:
             (specialatk) ? base *= 2 : base *= 1;
             if((blocktype == "4")||(blocktype == "3"))
             {
-                base /= 2;
+                base *= 0.1;
             }
             return (uint64_t)base;
         }
@@ -1262,11 +1351,11 @@ uint64_t darkcountryf::setdamage(uint64_t randnumb, std::string attacktype, std:
     {   
         if(randnumb<_cstate.achest)
         {
-            base *= 3;
+            base *= 2.667;
             (specialatk) ? base *= 2 : base *= 1;
             if((blocktype == "4")||(blocktype == "5"))
             {
-                base /= 2;
+                base *= 0.1;
             }
             return (uint64_t)base;
         }
@@ -1275,11 +1364,11 @@ uint64_t darkcountryf::setdamage(uint64_t randnumb, std::string attacktype, std:
     {   
         if(randnumb<_cstate.ahead)
         {
-            base *= 5;
+            base *= 4.859;
             (specialatk) ? base *= 2 : base *= 1;
             if((blocktype == "1")||(blocktype == "5"))
             {
-                base /= 2;
+                base *= 0.1;
             }
             return (uint64_t)base;
         }
@@ -1330,7 +1419,7 @@ extern "C" void apply(uint64_t receiver, uint64_t code, uint64_t action)
   {
     switch (action)
     {
-      EOSIO_DISPATCH_HELPER(darkcountryf, (resetstats)(createroom)(addtoroom)(deleteroom)(addheroes)(setchance)(returnheroes)(turn)(endturn)(fight)(receiverand)(delgame)(endgame)(deluser)(logfight)(cleanrooms)(deserialize)(endgamelog))
+      EOSIO_DISPATCH_HELPER(darkcountryf, (resetstats)(createroom)(addtoroom)(deleteroom)(addheroes)(setchance)(returnheroes)(turn)(endturn)(fight)(receiverand)(cleanall)(delgame)(endgame)(deluser)(logfight)(cleanrooms)(deserialize)(endgamelog))
     }
   }
   else if (code == ATOMICCONTRACT.value && action == eosio::name("transfer").value)

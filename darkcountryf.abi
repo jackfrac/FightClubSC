@@ -14,6 +14,10 @@
                 {
                     "name": "asset_ids",
                     "type": "uint64[]"
+                },
+                {
+                    "name": "k",
+                    "type": "string"
                 }
             ]
         },
@@ -88,6 +92,11 @@
                     "type": "uint64"
                 }
             ]
+        },
+        {
+            "name": "cleanall",
+            "base": "",
+            "fields": []
         },
         {
             "name": "cleanrooms",
@@ -686,6 +695,20 @@
             ]
         },
         {
+            "name": "uk",
+            "base": "",
+            "fields": [
+                {
+                    "name": "u",
+                    "type": "name"
+                },
+                {
+                    "name": "k",
+                    "type": "string"
+                }
+            ]
+        },
+        {
             "name": "usergame",
             "base": "",
             "fields": [
@@ -709,6 +732,11 @@
         {
             "name": "addtoroom",
             "type": "addtoroom",
+            "ricardian_contract": ""
+        },
+        {
+            "name": "cleanall",
+            "type": "cleanall",
             "ricardian_contract": ""
         },
         {
@@ -857,6 +885,13 @@
         {
             "name": "rateusers",
             "type": "rateuser",
+            "index_type": "i64",
+            "key_names": [],
+            "key_types": []
+        },
+        {
+            "name": "uks",
+            "type": "uk",
             "index_type": "i64",
             "key_names": [],
             "key_types": []
