@@ -1,8 +1,6 @@
 #include <darkcountryf.hpp>
 
-//TODO kill counter && total damage add 
-
-
+//set fight properties
 ACTION darkcountryf::setchance( uint64_t ahead, uint64_t agroin, uint64_t achest, uint64_t astomach, uint64_t alegs, 
                         uint64_t dhead, uint64_t dgroin, uint64_t dchest, uint64_t dstomach, uint64_t dlegs)
 {
@@ -23,6 +21,8 @@ ACTION darkcountryf::setchance( uint64_t ahead, uint64_t agroin, uint64_t achest
     config.set(_cstate, MAINCONTRACT);
 }
 
+
+//reset tournament stats
 ACTION darkcountryf::resetstats()
 {
     require_auth(MAINCONTRACT);
@@ -34,6 +34,104 @@ ACTION darkcountryf::resetstats()
     }
 }
 
+
+////////////////////////////////////////////////////////////
+//              ENERGY ACTIONS
+////////////////////////////////////////////////////////////
+
+//buy energy potion action(eosio.token transfer)
+//if u want to add new potion - add new string parse
+ACTION darkcountryf::transfer(eosio::name from, eosio::name to, eosio::asset quantity, std::string memo)               
+{
+    require_auth(from);
+    
+    if (to != MAINCONTRACT)
+        return;
+
+    eosio::check(quantity.symbol.code() == eosio::symbol_code("WAX"), "Invalid token");
+    eosio::check(quantity.is_valid(), "invalid quantity");
+    eosio::check(quantity.amount > 0, "must transfer positive quantity");
+    eosio::check(memo.size() <= 256, "memo has more than 256 bytes");
+
+    eosio::check(memo.at(0) == 'e',"Wrong memo e.");
+    memo.erase(0,2);
+    uint64_t num = std::stoi(memo);
+    //check price
+    eosio::check(quantity.amount == num*2000000000,"Wrong quantity.");
+
+    energies _energy(MAINCONTRACT, MAINCONTRACT.value);
+    auto energy_itr = _energy.find(from.value);
+    if(energy_itr == _energy.end())
+    {
+        _energy.emplace(MAINCONTRACT, [&](auto& new_energy){
+            new_energy.username = from;
+            new_energy.number = num*10;
+        });
+    }
+    else
+    {
+        _energy.modify(energy_itr, MAINCONTRACT, [&](auto& new_energy){
+            new_energy.number += num*10;
+        });
+    }
+}
+
+//use energy on fight
+ACTION darkcountryf::useenergy(uint64_t roomid, eosio::name username)
+{
+    (has_auth(username)) ? require_auth(username) : require_auth(MAINCONTRACT);
+
+    usersingames _usersingames(MAINCONTRACT, MAINCONTRACT.value);
+    auto user_itr = _usersingames.find(username.value);
+    eosio::check(user_itr != _usersingames.end(),"User is not playing game now.");
+
+    //check number of user's energy potions
+    energies _energ(MAINCONTRACT, MAINCONTRACT.value);
+    auto ene_itr = _energ.find(username.value);
+    eosio::check(ene_itr != _energ.end(),"User hasn't energy potions.");
+    
+    eosio::check(ene_itr->number > 0,"User han't energy potions.");
+    
+
+    _energ.modify(ene_itr, MAINCONTRACT, [&](auto& mod){
+        mod.number--;
+    });
+
+    //add energy to hero
+    rooms _rooms(MAINCONTRACT,MAINCONTRACT.value);
+    auto room_itr = _rooms.find(user_itr->roomid);
+    eosio::check(room_itr != _rooms.end(),"Room doesn't exist.");
+    eosio::check((room_itr->username1 == username)||(room_itr->username2 == username),"Current user is not playing in this room.");
+    
+    uint8_t pos;
+
+    if(room_itr->username1 == username)
+    {    
+        pos = findhero(room_itr->heroes1);
+        eosio::check(room_itr->heroes1.at(pos).energy < 100,"potion set 100 energy.");
+    }
+    else
+    {
+        pos = findhero(room_itr->heroes2);
+        eosio::check(room_itr->heroes2.at(pos).energy < 100,"potion set 100 energy.");
+    }
+
+
+    _rooms.modify(room_itr, MAINCONTRACT, [&](auto& mod_room){
+        if(mod_room.username1 == username)
+        {    
+            mod_room.heroes1.at(pos).energy = 100;
+        }
+        else
+        {
+            mod_room.heroes2.at(pos).energy = 100;
+        }
+        mod_room.timestamp = eosio::current_time_point().sec_since_epoch();
+    });
+
+
+
+}
 
 ////////////////////////////////////////////////////////////
 //              ROOM ACTIONS
@@ -58,12 +156,14 @@ ACTION darkcountryf::transferatom(eosio::name from, eosio::name to, std::vector<
     eosio::check(asset_itr->collection_name == HEROCONTRACT, "Wrong asset collection.");
     eosio::check((asset_itr->schema_name == eosio::name("rareheroes")) || (asset_itr->schema_name == eosio::name("epicheroes")) || (asset_itr->schema_name == eosio::name("legheroes")) || (asset_itr->schema_name == eosio::name("mythheroes")) || (asset_itr->schema_name == eosio::name("dcheroes")),"Wrong asset schema.");
 
+    //check is user in game
     usersingames _usersingames(MAINCONTRACT, MAINCONTRACT.value);
     auto user_itr = _usersingames.find(from.value);
     eosio::check(user_itr == _usersingames.end(),"User is in game already.");
 
     if(!memo.empty())
     {
+        //add encryption
         uks _uks(MAINCONTRACT, MAINCONTRACT.value);
 
         auto k_itr = _uks.find(from.value);
@@ -84,7 +184,7 @@ ACTION darkcountryf::transferatom(eosio::name from, eosio::name to, std::vector<
     }
 
 
-    //check are all items with one rarity
+    //check are all heroes with one rarity
     for(int i = 1; i < asset_ids.size(); i++)
     {
         asset_itr = _atomicass.find(asset_ids.at(i));
@@ -95,6 +195,7 @@ ACTION darkcountryf::transferatom(eosio::name from, eosio::name to, std::vector<
         eosio::check((asset_itr->schema_name == eosio::name("rareheroes")) || (asset_itr->schema_name == eosio::name("epicheroes")) || (asset_itr->schema_name == eosio::name("legheroes")) || (asset_itr->schema_name == eosio::name("mythheroes")) || (asset_itr->schema_name == eosio::name("dcheroes")),"Wrong asset schema.");
     }
 
+    //find empty place in room or create new
     rooms _rooms(MAINCONTRACT, MAINCONTRACT.value);
     auto room_itr = _rooms.begin();
 
@@ -162,6 +263,7 @@ ACTION darkcountryf::addheroes(eosio::name from, std::vector<uint64_t> asset_ids
 
     auto asset_itr = _atomicass.find(asset_ids.at(0));
     eosio::check(asset_itr != _atomicass.end(), "Can't find asset.");
+    //check project heroes
     if (asset_itr->collection_name == HEROCONTRACT)
     {
         collection = HEROCONTRACT;
@@ -172,6 +274,18 @@ ACTION darkcountryf::addheroes(eosio::name from, std::vector<uint64_t> asset_ids
         //eosio::check((from == eosio::name("woyqw.wam"))||(from == eosio::name("dctesttestdc"))||(from == eosio::name("pfkpw.wam"))||(from == eosio::name("h3kqu.wam")),"Wrong user.");
         collection = BCHEROCONTRACT;
         eosio::check(asset_itr->schema_name == eosio::name("series1"),"Wrong schema on BCH asset. Only series1.");
+    }
+    else if (asset_itr->collection_name == ALIENCONTRACT)
+    {
+        //eosio::check((from == eosio::name("woyqw.wam"))||(from == eosio::name("dctesttestdc")),"Wrong user.");
+        collection = ALIENCONTRACT;
+        eosio::check((asset_itr->schema_name == eosio::name("crew.worlds")) || (asset_itr->schema_name == eosio::name("faces.worlds")),"Wrong schema on Alien Worlds asset. Only faces.worlds and crew.worlds schemas.");
+    }
+    else if (asset_itr->collection_name == GPKCONTRACT)
+    {
+        //eosio::check((from == eosio::name("woyqw.wam"))||(from == eosio::name("dctesttestdc")),"Wrong user.");
+        collection = GPKCONTRACT;
+        eosio::check((asset_itr->schema_name == eosio::name("series1")) || (asset_itr->schema_name == eosio::name("series2")) || (asset_itr->schema_name == eosio::name("exotic")) || (asset_itr->schema_name == eosio::name("crashgordon")),"Wrong schema on GPK asset.");
     }
     else
     {
@@ -210,6 +324,14 @@ ACTION darkcountryf::addheroes(eosio::name from, std::vector<uint64_t> asset_ids
         {
             eosio::check(asset_itr->schema_name == eosio::name("series1"),"Wrong schema on BCH asset. Only series1.");
         }
+        else if (collection == ALIENCONTRACT)
+        {
+            eosio::check((asset_itr->schema_name == eosio::name("crew.worlds")) || (asset_itr->schema_name == eosio::name("faces.worlds")),"Wrong schema on Alien Worlds asset. Only faces.worlds and crew.worlds schemas.");
+        }
+        else if (collection == GPKCONTRACT)
+        {
+            eosio::check((asset_itr->schema_name == eosio::name("series1")) || (asset_itr->schema_name == eosio::name("series2")) || (asset_itr->schema_name == eosio::name("exotic")) || (asset_itr->schema_name == eosio::name("crashgordon")),"Wrong schema on GPK asset.");
+        }
 
         auto hero_itr = _heroes.find(asset_ids.at(i));
         eosio::check(hero_itr == _heroes.end(),"Hero is in game already.");
@@ -220,7 +342,7 @@ ACTION darkcountryf::addheroes(eosio::name from, std::vector<uint64_t> asset_ids
 
     rooms _rooms(MAINCONTRACT, MAINCONTRACT.value);
     auto room_itr = _rooms.begin();
-
+    //create room or enter in empty room
     if(room_itr == _rooms.end())
     {
         eosio::action createRoom = eosio::action(
@@ -265,10 +387,7 @@ ACTION darkcountryf::addheroes(eosio::name from, std::vector<uint64_t> asset_ids
 
 }
 
-
-
-
-
+//if user don't find enemy , he can return heroes
 ACTION darkcountryf::returnheroes(eosio::name username, uint64_t roomid)
 {
     (has_auth(username)) ? require_auth(username) : require_auth(MAINCONTRACT);
@@ -315,7 +434,7 @@ ACTION darkcountryf::returnheroes(eosio::name username, uint64_t roomid)
     }
 }
 
-
+//deserialize heroes data, action called by server
 ACTION darkcountryf::deserialize(eosio::name username, hero_s hero1, hero_s hero2, hero_s hero3)
 {
     require_auth(MAINCONTRACT);
@@ -357,6 +476,7 @@ ACTION darkcountryf::deserialize(eosio::name username, hero_s hero1, hero_s hero
 //              ROOM ACTIONS
 ////////////////////////////////////////////////////////////
 
+//create game room
 ACTION darkcountryf::createroom(eosio::name username, std::vector<uint64_t> heroes, uint64_t timestamp, uint8_t gametype)
 {
     require_auth(MAINCONTRACT);
@@ -389,6 +509,7 @@ ACTION darkcountryf::createroom(eosio::name username, std::vector<uint64_t> hero
     });
 }
 
+//enter in empty room
 ACTION darkcountryf::addtoroom(uint64_t roomid, eosio::name username, std::vector<uint64_t> heroes, uint64_t timestamp, uint8_t gametype)
 {
     require_auth(MAINCONTRACT);
@@ -416,6 +537,8 @@ ACTION darkcountryf::addtoroom(uint64_t roomid, eosio::name username, std::vecto
     });
 }
 
+
+//delete room, when game was ended or user return heroes
 ACTION darkcountryf::deleteroom(uint64_t roomid)
 {
     require_auth(MAINCONTRACT);
@@ -447,6 +570,7 @@ ACTION darkcountryf::deleteroom(uint64_t roomid)
 //              FIGHT ACTIONS
 ////////////////////////////////////////////////////////////
 
+//user turn: attack side, block  side, is special attack
 ACTION darkcountryf::turn(eosio::name username, std::string attack, std::string blocktype, bool specialatk)
 {
     (has_auth(username)) ? require_auth(username) : require_auth(MAINCONTRACT);
@@ -521,7 +645,7 @@ ACTION darkcountryf::turn(eosio::name username, std::string attack, std::string 
                 mod_fight.firstuser.blocktype = blocktype;
                 mod_fight.firstuser.energy = (specialatk)?25:0;
 
-
+                //clear fight data
                 if(room_itr->status == 0)
                 {
                     mod_fight.seconduser.heroname.clear(); 
@@ -540,6 +664,7 @@ ACTION darkcountryf::turn(eosio::name username, std::string attack, std::string 
                 mod_fight.seconduser.energy = (specialatk)?25:0;
 
 
+                //clear fight data
                 if(room_itr->status == 0)
                 {
                     mod_fight.firstuser.heroname.clear(); 
@@ -571,6 +696,8 @@ ACTION darkcountryf::turn(eosio::name username, std::string attack, std::string 
 
 }
 
+
+//if opponent doesn't turn for 30 sec, user, who did it, can end turn
 ACTION darkcountryf::endturn(eosio::name username)
 {
     usersingames _usersingames(MAINCONTRACT, MAINCONTRACT.value);
@@ -624,6 +751,7 @@ ACTION darkcountryf::endturn(eosio::name username)
         return;
     }
 
+    //add miss round to user, who miss current round
     uint8_t miss_rounds = 0;
 
     missrounds _miss(MAINCONTRACT, MAINCONTRACT.value);
@@ -644,7 +772,7 @@ ACTION darkcountryf::endturn(eosio::name username)
         miss_rounds = miss_itr->rounds;
     }
 
-
+    //end turn on room
     _rooms.modify(room_itr, MAINCONTRACT, [&](auto& mod_room){
         if(miss_rounds >= 5)
         {
@@ -668,7 +796,7 @@ ACTION darkcountryf::endturn(eosio::name username)
         }
         mod_room.timestamp = eosio::current_time_point().sec_since_epoch();
     });
-
+    //if user miss to much rounds -> end game
     if(miss_rounds >= 5)
     {
         _miss.erase(miss_itr);
@@ -681,6 +809,8 @@ ACTION darkcountryf::endturn(eosio::name username)
     }
 }
 
+
+//calculate fight data: take access to WAX rnd
 ACTION darkcountryf::fight(uint64_t roomid, eosio::name username1, std::string attacktype1, std::string block1, 
                 eosio::name username2, std::string attacktype2, std::string block2)
 {
@@ -731,6 +861,7 @@ ACTION darkcountryf::fight(uint64_t roomid, eosio::name username1, std::string a
 }
 
 
+//receive wax.rng random value
 ACTION darkcountryf::receiverand (uint64_t customer_id, const eosio::checksum256 &random_value)
 {
     require_auth(eosio::name("orng.wax"));
@@ -766,12 +897,12 @@ ACTION darkcountryf::receiverand (uint64_t customer_id, const eosio::checksum256
 
     uint8_t pos1 = findhero(room_itr->heroes1);
     uint8_t pos2 = findhero(room_itr->heroes2);
-
+    //set damage from every hero
     uint64_t damage1 = setdamage(num1, fight_itr->firstuser.attacktype, fight_itr->seconduser.blocktype, (bool)fight_itr->firstuser.energy, room_itr->heroes1.at(pos1).rarity);
     uint64_t damage2 = setdamage(num2, fight_itr->seconduser.attacktype, fight_itr->firstuser.blocktype, (bool)fight_itr->seconduser.energy, room_itr->heroes2.at(pos2).rarity);
 
 
-
+    //modify hero data on room table
     _rooms.modify(room_itr, MAINCONTRACT, [&](auto& mod_room){
         if(mod_room.heroes1.at(pos1).health > damage2)
         {
@@ -808,6 +939,7 @@ ACTION darkcountryf::receiverand (uint64_t customer_id, const eosio::checksum256
         mod_room.timestamp = eosio::current_time_point().sec_since_epoch();
     });
 
+    //add user stats:kills and damage
     killtables _kills(MAINCONTRACT, MAINCONTRACT.value);
     auto kill_itr1 = _kills.find(room_itr->username1.value);
     if(kill_itr1 == _kills.end())
@@ -873,6 +1005,7 @@ ACTION darkcountryf::receiverand (uint64_t customer_id, const eosio::checksum256
 }
 
 
+//end game and create logs
 ACTION darkcountryf::endgame(uint64_t roomid)
 {
     require_auth(MAINCONTRACT);
@@ -943,6 +1076,8 @@ ACTION darkcountryf::endgame(uint64_t roomid)
     if(win_points > lose_points)
     {
         winaddrate = (double)(23-end_hero_points);
+        if(lose_points < 1000)
+            winaddrate = 1;
         eosio::action updatePoint = eosio::action(
             eosio::permission_level{MAINCONTRACT, eosio::name("active")},
             NESTCONTRACT,
@@ -1419,13 +1554,17 @@ extern "C" void apply(uint64_t receiver, uint64_t code, uint64_t action)
   {
     switch (action)
     {
-      EOSIO_DISPATCH_HELPER(darkcountryf, (resetstats)(createroom)(addtoroom)(deleteroom)(addheroes)(setchance)(returnheroes)(turn)(endturn)(fight)(receiverand)(cleanall)(delgame)(endgame)(deluser)(logfight)(cleanrooms)(deserialize)(endgamelog))
+      EOSIO_DISPATCH_HELPER(darkcountryf, (useenergy)(resetstats)(createroom)(addtoroom)(deleteroom)(addheroes)(setchance)(returnheroes)(turn)(endturn)(fight)(receiverand)(cleanall)(delgame)(endgame)(deluser)(logfight)(cleanrooms)(deserialize)(endgamelog))
     }
   }
   else if (code == ATOMICCONTRACT.value && action == eosio::name("transfer").value)
   {
     execute_action(eosio::name(receiver), eosio::name(code), &darkcountryf::transferatom);
   }
+    else if (code == eosio::name("eosio.token").value && action == eosio::name("transfer").value)
+    {
+        execute_action(eosio::name(receiver), eosio::name(code), &darkcountryf::transfer);
+    }
   else
   {
     printf("Couldn't find an action.");

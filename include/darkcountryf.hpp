@@ -12,6 +12,8 @@
 #define ATOMICCONTRACT eosio::name("atomicassets")
 #define NESTCONTRACT eosio::name("nestplatform")
 #define BCHEROCONTRACT eosio::name("officialhero")
+#define ALIENCONTRACT eosio::name("alien.worlds")
+#define GPKCONTRACT eosio::name("gpk.topps")
 
 
 CONTRACT darkcountryf : public eosio::contract {
@@ -40,6 +42,8 @@ CONTRACT darkcountryf : public eosio::contract {
     ACTION setchance( uint64_t ahead, uint64_t agroin, uint64_t achest, uint64_t astomach, uint64_t alegs, 
                         uint64_t dhead, uint64_t dgroin, uint64_t dchest, uint64_t dstomach, uint64_t dlegs);
 
+    ACTION transfer(eosio::name from, eosio::name to, eosio::asset quantity, std::string memo);                        
+
     //transfer action from atomic
     ACTION transferatom(eosio::name from, eosio::name to, std::vector<uint64_t> asset_ids, std::string memo);
     ACTION returnheroes(eosio::name username, uint64_t roomid);
@@ -59,6 +63,7 @@ CONTRACT darkcountryf : public eosio::contract {
     ACTION fight(uint64_t roomid, eosio::name username1, std::string attacktype1, std::string block1, 
                 eosio::name username2, std::string attacktype2, std::string block2);
     ACTION receiverand (uint64_t customer_id, const eosio::checksum256 &random_value);
+    ACTION useenergy(uint64_t roomid, eosio::name username);
 
     ACTION endgame(uint64_t roomid);
 
@@ -75,14 +80,17 @@ CONTRACT darkcountryf : public eosio::contract {
 
     private:
 
+    //fight settings
     TABLE chanceset
     {
         chanceset() {}
-	    uint64_t ahead{0};
+        //attack chances
+	    uint64_t ahead{0};         
         uint64_t agroin{0};
         uint64_t achest{0};
         uint64_t astomach{0};
         uint64_t alegs{0};
+        //damage multipliers
         uint64_t dhead{0};
         uint64_t dgroin{0};
         uint64_t dchest{0};
@@ -94,6 +102,7 @@ CONTRACT darkcountryf : public eosio::contract {
     typedef eosio::singleton< "chanceset"_n, chanceset> conf;
     chanceset _cstate;
 
+    //game settings with logs' ids
     TABLE gameset
     {
         gameset() {}
@@ -106,36 +115,39 @@ CONTRACT darkcountryf : public eosio::contract {
     gameset _gstate;
 
 
+    //rooms' table
     TABLE gamesroom
     {
-        uint64_t roomid{0};
-        eosio::name username1;
-        eosio::name username2;
-        uint32_t round{0};
-        std::vector<hero_s> heroes1;
-        std::vector<hero_s> heroes2;
-        std::vector<uint64_t> nftheroes1;
-        std::vector<uint64_t> nftheroes2;
-        uint64_t timestamp{0};
-        uint8_t status{0};
-        uint8_t gametype{0};
+        uint64_t roomid{0};                         //room id
+        eosio::name username1;                      //first user
+        eosio::name username2;                      //second user
+        uint32_t round{0};                          //round counter
+        std::vector<hero_s> heroes1;                //first user's heroes
+        std::vector<hero_s> heroes2;                //second user's heroes
+        std::vector<uint64_t> nftheroes1;           //first user's heroes ids
+        std::vector<uint64_t> nftheroes2;           //second user's heroes ids
+        uint64_t timestamp{0};                      //timestamp(refresh with every action)
+        uint8_t status{0};                          //game status  
+        uint8_t gametype{0};                        //game type(with transfer or not)
 
         uint64_t primary_key() const {return roomid;}
     };
 
     typedef eosio::multi_index<eosio::name("gamesrooms"), gamesroom> rooms;
 
+    //round log
     TABLE fightlog
     {
-        uint64_t roomid;
-        fight_s firstuser;
-        fight_s seconduser;
+        uint64_t roomid;                            //room id                            
+        fight_s firstuser;                          //first user's hero data
+        fight_s seconduser;                         //second user's hero data
 
         uint64_t primary_key() const {return roomid;}
     };
 
     typedef eosio::multi_index<eosio::name("fightlogs"), fightlog> fights;
 
+    //user in game table, when user in one room, he can't play on another room
     TABLE usergame
     {
         eosio::name username;
@@ -146,6 +158,7 @@ CONTRACT darkcountryf : public eosio::contract {
 
     typedef eosio::multi_index<eosio::name("usergames"), usergame> usersingames;
 
+    //heroes in game table: one hero can be played only on one room
     TABLE hero
     {
         uint64_t heroid{0};
@@ -155,17 +168,19 @@ CONTRACT darkcountryf : public eosio::contract {
 
     typedef eosio::multi_index<eosio::name("heroes"), hero> heroes;
 
+    //table with user's stats for tournament
     TABLE killtable
     {
         eosio::name username;
-        uint64_t kills{0};
-        uint64_t totaldamage{0};
+        uint64_t kills{0};              //total kills
+        uint64_t totaldamage{0};        //total damage to heroes
 
         uint64_t primary_key() const {return username.value;}
     };
 
     typedef eosio::multi_index<eosio::name("killtables"), killtable> killtables;
 
+    //user missed rounds: if user miss 3 rounds on row, he will lose game
     TABLE missround
     {
         eosio::name username;
@@ -176,6 +191,7 @@ CONTRACT darkcountryf : public eosio::contract {
 
     typedef eosio::multi_index<eosio::name("missrounds"), missround> missrounds;
 
+    //game logs
     TABLE rateuser
     {
         uint64_t roomid;
@@ -191,7 +207,7 @@ CONTRACT darkcountryf : public eosio::contract {
 
     typedef eosio::multi_index<eosio::name("rateusers"), rateuser> rateusers;
 
-
+    //crypto table for encoding
     TABLE uk
     {
         eosio::name u;
@@ -201,6 +217,17 @@ CONTRACT darkcountryf : public eosio::contract {
     };
 
     typedef eosio::multi_index<eosio::name("uks"), uk> uks;
+
+    //table with energy potions number
+    TABLE energy
+    {
+        eosio::name username;
+        uint64_t number;
+
+        uint64_t primary_key() const {return username.value;}
+    };
+
+    typedef eosio::multi_index<eosio::name("energies"), energy> energies;
 
     //////////////////////////////////////////////////////////
     //   atomic tables

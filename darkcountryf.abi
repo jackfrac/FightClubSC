@@ -216,6 +216,20 @@
             ]
         },
         {
+            "name": "energy",
+            "base": "",
+            "fields": [
+                {
+                    "name": "username",
+                    "type": "name"
+                },
+                {
+                    "name": "number",
+                    "type": "uint64"
+                }
+            ]
+        },
+        {
             "name": "fight",
             "base": "",
             "fields": [
@@ -651,6 +665,28 @@
             ]
         },
         {
+            "name": "transfer",
+            "base": "",
+            "fields": [
+                {
+                    "name": "from",
+                    "type": "name"
+                },
+                {
+                    "name": "to",
+                    "type": "name"
+                },
+                {
+                    "name": "quantity",
+                    "type": "asset"
+                },
+                {
+                    "name": "memo",
+                    "type": "string"
+                }
+            ]
+        },
+        {
             "name": "transferatom",
             "base": "",
             "fields": [
@@ -705,6 +741,20 @@
                 {
                     "name": "k",
                     "type": "string"
+                }
+            ]
+        },
+        {
+            "name": "useenergy",
+            "base": "",
+            "fields": [
+                {
+                    "name": "roomid",
+                    "type": "uint64"
+                },
+                {
+                    "name": "username",
+                    "type": "name"
                 }
             ]
         },
@@ -815,6 +865,11 @@
             "ricardian_contract": ""
         },
         {
+            "name": "transfer",
+            "type": "transfer",
+            "ricardian_contract": ""
+        },
+        {
             "name": "transferatom",
             "type": "transferatom",
             "ricardian_contract": ""
@@ -823,12 +878,24 @@
             "name": "turn",
             "type": "turn",
             "ricardian_contract": ""
+        },
+        {
+            "name": "useenergy",
+            "type": "useenergy",
+            "ricardian_contract": ""
         }
     ],
     "tables": [
         {
             "name": "chanceset",
             "type": "chanceset",
+            "index_type": "i64",
+            "key_names": [],
+            "key_types": []
+        },
+        {
+            "name": "energies",
+            "type": "energy",
             "index_type": "i64",
             "key_names": [],
             "key_types": []
